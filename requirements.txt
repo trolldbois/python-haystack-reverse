@@ -5,6 +5,5 @@ haystack
 networkx
 numpy
 pefile
-pkg-resources
 python-Levenshtein
 six==1.10.0
