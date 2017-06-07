@@ -7,6 +7,8 @@
 
 # haystack-comment: used in structure.py:CacheWrapper
 
+from __future__ import print_function, generators
+
 """a simple LRU (Least-Recently-Used) cache module
 
 This module provides very simple LRU (Least-Recently-Used) cache
@@ -33,7 +35,6 @@ discarded. [1]_
 
 """
 
-from __future__ import generators
 import time
 from heapq import heappush, heappop, heapify
 
@@ -107,8 +108,8 @@ class LRUCache(object):
             self.atime = timestamp
             self.mtime = self.atime
 
-        def __cmp__(self, other):
-            return cmp(self.atime, other.atime)
+        def __lt__(self, other):
+            return self.atime < other.atime
 
         def __repr__(self):
             return "<%s %s => %s (%s)>" % \
@@ -200,21 +201,21 @@ class LRUCache(object):
 
 if __name__ == "__main__":
     cache = LRUCache(25)
-    print cache
+    print(cache)
     for i in range(50):
         cache[i] = str(i)
-    print cache
+    print(cache)
     if 46 in cache:
         del cache[46]
-    print cache
+    print(cache)
     cache.size = 10
-    print cache
+    print(cache)
     cache[46] = '46'
-    print cache
-    print len(cache)
+    print(cache)
+    print(len(cache))
     for c in cache:
-        print c
-    print cache
-    print cache.mtime(46)
+        print(c)
+    print(cache)
+    print(cache.mtime(46))
     for c in cache:
-        print c
+        print(c)

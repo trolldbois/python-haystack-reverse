@@ -48,9 +48,9 @@ class PyPrepTestsCommand(distutils.cmd.Command):
         return p.returncode
 
 
-setup(name="haystack",
-      version="0.36",
-      description="Search C Structures in a process' memory",
+setup(name="haystack-reverse",
+      version="0.40",
+      description="Reverse C Structures from a process' memory",
       long_description=open("README.md").read(),
       url="http://packages.python.org/haystack/",
       download_url="http://github.com/trolldbois/python-haystack/tree/master",
@@ -69,41 +69,14 @@ setup(name="haystack",
       keywords=["memory", "analysis", "forensics", "record", "struct", "ptrace", "reverse", "heap", "lfh", "lal"],
       author="Loic Jaquemet",
       author_email="loic.jaquemet+python@gmail.com",
-      packages=["haystack",
-                "haystack.abc",
-                "haystack.gui",
-                "haystack.mappings",
-                "haystack.outputters",
+      packages=[
                 "haystack.reverse",
                 "haystack.reverse.heuristics",
-                "haystack.search",
-                "haystack.allocators",
-                "haystack.allocators.libc",
-                "haystack.allocators.win32"],
+],
       # package_dir={"haystack.reverse": 'haystack/reverse'},
-      package_data={"haystack.reverse.heuristics": ['data/words.100'],
-                    "haystack.allocators.win32": ['win7heap32.constraints',
-                                                  'win7heap64.constraints',
-                                                  'winxpheap32.constraints',
-                                                  'winxpheap64.constraints'],
-                    "haystack.allocators.libc": ['libcheap.constraints']},
+      package_data={"haystack.reverse.heuristics": ['data/words.100'],},
       entry_points={
           'console_scripts': [
-              'haystack-find-heap = haystack.cliwin:find_heap',
-              'haystack-search = haystack.cli:main_search',
-              'haystack-show = haystack.cli:main_show',
-              'haystack-live-dump = haystack.memory_dumper:main',
-              'haystack-live-search = haystack.cli:live_search',
-              'haystack-live-show = haystack.cli:live_show',
-              # 'haystack-live-watch = haystack.cli:live_watch',
-              'haystack-rekall-search = haystack.cli:rekall_search',
-              'haystack-rekall-show = haystack.cli:rekall_show',
-              'haystack-rekall-dump = haystack.cli:rekall_dump',
-              'haystack-volatility-search = haystack.cli:volatility_search',
-              'haystack-volatility-show = haystack.cli:volatility_show',
-              'haystack-volatility-dump = haystack.cli:volatility_dump',
-              'haystack-minidump-search = haystack.cli:minidump_search',
-              'haystack-minidump-show = haystack.cli:minidump_show',
               'haystack-reverse = haystack.reverse.cli:main_reverse',
               'haystack-minidump-reverse = haystack.reverse.cli:minidump_reverse',
               'haystack-reverse-show = haystack.reverse.cli:main_reverse_show',
@@ -114,23 +87,17 @@ setup(name="haystack",
               'haystack-minidump-reverse-hex = haystack.reverse.cli:minidump_reverse_hex',
           ]
       },
-      scripts=[
-               # "scripts/haystack-gui",
-               ],
       # reverse: numpy is a dependency for reverse.
       # https://github.com/numpy/numpy/issues/2434
       # numpy is already installed in travis-ci
-      ## setup_requires=["numpy"],
+      # setup_requires=["numpy"],
       # search: install requires only pefile, python-ptrace for memory-dump
       # reverse: install requires networkx, numpy, Levenshtein for signatures
-      install_requires=["pefile>=1.2.10_139",
-                        "construct",
+      install_requires=[ "haystack",
                         # reverse need these.
                         # "numpy",
-                        # "networkx",
-                        # "python-Levenshtein"
-                        ] + ["python-ptrace>=0.8.1"] if "win" not in sys.platform else []
-                        + ["winappdbg"] if "win" in sys.platform else [],
+                        "networkx",
+                        "python-Levenshtein"],
       dependency_links=[
                         # "https://github.com/trolldbois/ctypeslib/tarball/dev#egg=ctypeslib2-2.4beta",
                         "https://github.com/volatilityfoundation/volatility/tarball/master#egg=volatility-trunk",

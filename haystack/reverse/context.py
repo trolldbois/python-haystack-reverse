@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+from __future__ import print_function
+from past.builtins import long
+from builtins import map
+
 import logging
 import pickle
 # import dill as pickle
@@ -170,7 +174,7 @@ class ProcessContext(object):
                 try:
                     fout.write('\n'.join(towrite))
                 except UnicodeDecodeError as e:
-                    print 'ERROR on ', r_type
+                    print('ERROR on ', r_type)
                 towrite = []
                 fout.flush()
         # add some stats
@@ -196,6 +200,7 @@ class ProcessContext(object):
         predecessors_label = self.__record_graph.predecessors(hex(record.address))
         records = []
         for label in predecessors_label:
+            # FIXME, eradicate all L for PY3 migration
             if label[-1] == 'L':
                 label = label[:-1]
             record_addr = int(label, 16)
@@ -355,7 +360,7 @@ class HeapContext(object):
 
     def listPointerValueInHeap(self):
         '''Returns the list of pointers found in the heap'''
-        return map(long, self._pointers_values)
+        return list(map(long, self._pointers_values))
 
     def listStructuresAddrForPointerValue(self, ptr_value):
         '''Returns the list of allocators addresses with a member with this pointer value '''
@@ -368,16 +373,16 @@ class HeapContext(object):
                 for addr in self.listStructuresAddrForPointerValue(ptr_value)]
 
     def list_allocations_addresses(self):
-        return map(long, self._structures_addresses)
+        return list(map(long, self._structures_addresses))
 
     def list_allocations_sizes(self):
-        return map(long, self._structures_sizes)
+        return list(map(long, self._structures_sizes))
 
     def listStructuresAddresses(self):
-        return map(long, self._list_records().keys())
+        return list(map(long, self._list_records().keys()))
 
     def listStructures(self):
-        return self._list_records().values()
+        return list(self._list_records().values())
 
     def is_known_address(self, address):
         return address in self._structures_addresses
@@ -453,12 +458,12 @@ class HeapContext(object):
         config.create_cache_folder(dumpname)
         context_cache = config.get_cache_filename(config.CACHE_CONTEXT, dumpname, heap_addr)
         try:
-            with file(context_cache, 'r') as fin:
+            with open(context_cache, 'rb') as fin:
                 ctx = pickle.load(fin)
-        except EOFError as e:
+        except (ValueError, EOFError) as e:
             os.remove(context_cache)
             log.error('Error in the context file. File cleaned. Please restart.')
-            raise RuntimeError('Error in the context file. File cleaned. Please restart.')
+            raise IOError('Error in the context file. File cleaned. Please restart.')
         log.debug('\t[-] loaded my context from cache')
         ctx.config = config
         ctx.memory_handler = memory_handler
@@ -472,9 +477,9 @@ class HeapContext(object):
         # cached records
         cache_context_filename = self.get_filename_cache_context()
         try:
-            with file(cache_context_filename, 'w') as fout:
+            with open(cache_context_filename, 'wb') as fout:
                 pickle.dump(self, fout)
-        except pickle.PicklingError, e:
+        except pickle.PicklingError as e:
             log.error("Pickling error on %s, file removed", cache_context_filename)
             os.remove(cache_context_filename)
             raise e
