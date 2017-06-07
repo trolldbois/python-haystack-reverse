@@ -95,7 +95,7 @@ setup(name="haystack-reverse",
       # reverse: install requires networkx, numpy, Levenshtein for signatures
       install_requires=[ "haystack",
                         # reverse need these.
-                        # "numpy",
+                        "numpy",
                         "networkx",
                         "python-Levenshtein"],
       dependency_links=[
