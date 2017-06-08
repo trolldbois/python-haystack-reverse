@@ -81,7 +81,7 @@ setup(name="haystack-reverse",
       # numpy is already installed in travis-ci
       # setup_requires=["numpy"],
       # reverse: install requires networkx, numpy, Levenshtein for signatures
-      install_requires=["haystack",
+      install_requires=["haystack>0.39",
                         "numpy",
                         "networkx",
                         "python-Levenshtein"],
