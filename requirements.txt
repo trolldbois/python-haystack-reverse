@@ -1,11 +1,11 @@
-pefile #>=1.2.10_139
-python-ptrace>=0.8.1 #; sys.platform != 'win32'
-# winappdbg
-networkx>=1.9.0
-python-Levenshtein>=0.12
-# lets try to use system package / will be install in setup
-numpy
 construct<2.8
-
-# preptest requires it, not install
-# ctypeslib2
+decorator
+future
+-e git://github.com/trolldbois/python-haystack.git@development#egg=haystack
+# -e git://github.com/{ username }/{ reponame }.git@{ tag name }#egg={ desired egg name }
+haystack
+networkx
+numpy
+pefile
+python-Levenshtein
+six==1.10.0
