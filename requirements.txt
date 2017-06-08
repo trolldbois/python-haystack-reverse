@@ -1,10 +1,6 @@
-construct<2.8
-decorator
-future
 # -e git://github.com/trolldbois/python-haystack.git@development#egg=haystack
-haystack
+haystack>0.39
 networkx
 numpy
-pefile
 python-Levenshtein
 six==1.10.0
