@@ -1,7 +1,7 @@
 construct<2.8
 decorator
 future
-# -e git://github.com/trolldbois/python-haystack.git#egg=python-haystack/development
+-e git://github.com/trolldbois/python-haystack.git@development#egg=haystack
 # -e git://github.com/{ username }/{ reponame }.git@{ tag name }#egg={ desired egg name }
 haystack
 networkx
