@@ -53,7 +53,7 @@ int test1(){
 
         printf("o: struct_a %p\n", ptr);
         printf("t: sizeof %zu\n\n", sizeof(struct a));
-    }    
+    }
     {
         union au * ptr;
 
@@ -68,7 +68,7 @@ int test1(){
 
         printf("o: union_au %p\n", ptr);
         printf("t: sizeof %zu\n\n", sizeof(union au));
-    }    
+    }
     return 0;
 }
 
@@ -92,6 +92,7 @@ int test2(){
         ptr->b = -98;
         ptr->c = +99;
         ptr->e = -5;
+        ptr->g = 'x';
 
         printf("s: union_b\n");
 
@@ -102,7 +103,7 @@ int test2(){
 
         printf("o: union_b %p\n", ptr);
         printf("t: sizeof %zu\n\n", sizeof(union b));
-    }    
+    }
     return 0;
 }
 
@@ -148,7 +149,7 @@ int test3(){
 
         printf("o: struct_c %p\n", ptr);
         printf("t: sizeof %zu\n\n", sizeof(struct c));
-    }    
+    }
     return 0;
 }
 
@@ -184,7 +185,7 @@ int test4(){
         ptra->e = 41;
         printf("v: e %llu\n", ptra->e);
         printf("o: struct_d.b %p\n", ptra);
-        
+
         printf("s: struct_d.b2\n");
         ptrau = (union au *) malloc(sizeof(union au));
         ptrau->e = 42;
@@ -199,7 +200,7 @@ int test4(){
         strcpy(txt,"lorem ipsum\0");
         txt2 = (char *) malloc(42);
         strcpy(txt2,"lorem ipsum 2\0");
-        
+
         printf("s: struct_d\n");
         ptr = (struct d *) malloc(sizeof(struct d));
         ptr->a = (void *) ptr; // need to be valid memory addr
@@ -234,7 +235,7 @@ int test4(){
         printf("o: struct_d %p\n", ptr);
 
         printf("t: sizeof %zu\n\n", sizeof(struct d));
-    }    
+    }
     return 0;
 }
 

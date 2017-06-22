@@ -12,11 +12,11 @@ Quick Start:
 Introduction:
 =============
 
-python-haystack-reverse is extension of [python-haystack](https://github.com/trolldbois/python-haystack) focused on 
+python-haystack-reverse is extension of [python-haystack](https://github.com/trolldbois/python-haystack) focused on
 reversing memory structure in allocated memory.
 
  - It aims at helping an analyst in reverse engineering the memory records types present in a process heap.
-It focuses on reconstruction, classification of classic C structures from memory. 
+It focuses on reconstruction, classification of classic C structures from memory.
 It attempts to recreate types definition.
 
 Scripts & Entry Points:
@@ -47,9 +47,9 @@ Heap analysis / forensics:
 ==========================
 
 Quick info:
- - The `haystack-xxx-reverse` family of entry points parse the heap for 
+ - The `haystack-xxx-reverse` family of entry points parse the heap for
  allocator structures, pointers values, small integers and text (ascii/utf).
- Given all the previous information, it can extract instances and helps you 
+ Given all the previous information, it can extract instances and helps you
  in classifying and defining structures types.
 
 IPython notebook usage guide:

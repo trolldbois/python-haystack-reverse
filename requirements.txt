@@ -1,5 +1,5 @@
 # -e git://github.com/trolldbois/python-haystack.git@development#egg=haystack
-haystack>0.39
+haystack>=0.41
 networkx
 numpy
 python-Levenshtein

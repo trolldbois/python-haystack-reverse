@@ -265,9 +265,13 @@ class PointerIntervalSignature:
         self.mmap = self.memory_handler._get_mapping(self.mmap_pathname)[0]
         return
 
+    def _get_cache_filename(self):
+        return config.get_cache_filename('pinned', self.name)
+
     def _load(self):
         # DO NOT SORT LIST. c'est des sequences. pas des sets.
-        myname = self.cacheFilenamePrefix + '.pinned'
+        #self.cacheFilenamePrefix + '.pinned'
+        myname = self._get_cache_filename()
         log.debug('Reading signature from %s',myname)
         sig = utils.int_array_cache(myname)
         if sig is None:
@@ -297,7 +301,9 @@ class PointerIntervalSignature:
 
     def _loadAddressCache(self):
         # DO NOT SORT LIST. c'est des sequences. pas des sets.
-        myname = self.cacheFilenamePrefix + '.pinned.vaddr'
+        # myname = self.cacheFilenamePrefix + '.pinned.vaddr'
+        myname = self._get_cache_filename() + '.vaddr'
+
         if os.access(myname, os.F_OK):
             addressCache = pickle.load(open(myname, 'rb'))
             log.debug("%d Signature addresses loaded from cache." % (len(addressCache)))
@@ -309,7 +315,8 @@ class PointerIntervalSignature:
         return
 
     def _saveAddressCache(self):
-        myname = self.cacheFilenamePrefix + '.pinned.vaddr'
+        # myname = self.cacheFilenamePrefix + '.pinned.vaddr'
+        myname = self._get_cache_filename() + '.vaddr'
         pickle.dump(self.addressCache, open(myname, 'wb'))
 
     def getAddressForPreviousPointer(self, offset):

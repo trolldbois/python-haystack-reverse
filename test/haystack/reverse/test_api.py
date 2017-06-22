@@ -15,7 +15,7 @@ class TestReverseApi(unittest.TestCase):
 
     def setUp(self):
         dumpname = zeus_856_svchost_exe.dumpname
-        config.remove_cache_folder(dumpname)
+        # config.remove_cache_folder(dumpname)
         self.memory_handler = dump_loader.load(dumpname)
         process_context = self.memory_handler.get_reverse_context()
 

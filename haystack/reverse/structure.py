@@ -194,6 +194,7 @@ class AnonymousRecord(object):
             raise ValueError("a record should have a positive size")
         self._size = size
         self._reverse_level = 0
+        # FIXME why not use fieldstypes.STRUCT ?
         self.__record_type = fieldtypes.RecordType('struct_%x' % self.__address, self._size, [])
         self._resolved = False
         self._resolvedPointers = False
@@ -255,6 +256,10 @@ class AnonymousRecord(object):
 
         All inner structure fields will also be changed from RecordField to instantiated RecordField
 
+        # FIXME why not use fieldstypes.STRUCT for type and a field definition ?
+        # is it really worth haveing a definitiion separate ?
+        # yes so we can copy the recordType to other anonnymousstruct
+
         :param t:
         :return:
         """
@@ -276,7 +281,7 @@ class AnonymousRecord(object):
         # first double check that the record type contains properly initialised
         # RecordFields, if any
         if self._fields is not None:
-            return self._fields
+            return list(self._fields)
         _fields = []
         for f in self.__record_type.get_fields():
             if f.is_record():
@@ -285,7 +290,7 @@ class AnonymousRecord(object):
                 _fields.append(fieldtypes.InstantiatedField(f, self))
         # save it, do not save instantiated record type
         self._fields = _fields
-        return self._fields
+        return list(self._fields)
 
     def get_field(self, name):
         """
@@ -390,8 +395,9 @@ class AnonymousRecord(object):
         self.get_fields().sort()
         field_string_lines = []
         for field in self.get_fields():
-            field_value = field.value
-            field_string_lines.append('\t'+field.to_string(field_value))
+            #field_value = field.value
+            # field_string_lines.append('\t'+field.to_string(field_value))
+            field_string_lines.append('\t%s' % field.to_string())
         fieldsString = '[ \n%s ]' % (''.join(field_string_lines))
         info = 'rlevel:%d SIG:%s size:%d' % (self.get_reverse_level(), self.get_signature_text(), len(self))
         final_ctypes = 'ctypes.Structure'
@@ -482,16 +488,16 @@ class %s(%s):  # %s
     ### pieces of codes that need review.
 
     def get_signature_text(self):
-        return ''.join(['%s%d' % (f.get_signature()[0].signature, f.get_signature()[1]) for f in self.get_fields()])
+        return ''.join(['%s%d' % (f.signature[0], f.signature[1]) for f in self.get_fields()])
 
     def get_signature(self):
-        return [f.get_signature() for f in self.get_fields()]
+        return [f.signature for f in self.get_fields()]
 
     def get_type_signature_text(self):
-        return ''.join([f.get_signature()[0].signature.upper() for f in self.get_fields()])
+        return ''.join([f.signature[0].upper() for f in self.get_fields()])
 
     def get_type_signature(self):
-        return [f.get_signature()[0] for f in self.get_fields()]
+        return [f.signature[0] for f in self.get_fields()]
 
     # def get_value_for_field(self, _field, max_len=120):
     #     my_bytes = self._get_value_for_field(_field, max_len)
@@ -560,6 +566,10 @@ class RecordFieldInstance(AnonymousRecord, fieldtypes.RecordField):
         #
         fieldtypes.RecordField.__init__(self, record_field.name, record_field.offset, record_field.get_typename(), record_field.get_fields())
         assert self.field_type == fieldtypes.STRUCT
+        # FIXME why not use fieldstypes.STRUCT ?
+        # FIXME why not use fieldstypes.STRUCT for type and a field definition ?
+        # is it really worth haveing a definitiion separate ?
+        # yes so we can copy the recordType to other anonnymousstruct
         _record_type = fieldtypes.RecordType(record_field.get_typename(), size, record_field.get_fields())
         #_record_type = record_field
         # recursively sets the record
@@ -568,6 +578,12 @@ class RecordFieldInstance(AnonymousRecord, fieldtypes.RecordField):
 
     def get_typename(self):
         return '%s' % self.field_type
+
+    def get_signature(self):
+        return self.record_type, self.size
+
+    def get_type_signature(self):
+        return self.record_type.signature
 
 
 class ReversedType(ctypes.Structure):

@@ -119,12 +119,12 @@ class Field(object):
     """
     def __init__(self, name, offset, _type, size, is_padding):
         self._name = name
-        self.__offset = offset
+        self._offset = offset
         assert isinstance(_type, FieldType)
-        self.__field_type = _type
-        self.__size = size
-        self.__padding = is_padding
-        self.__comment = '#'
+        self._field_type = _type
+        self._size = size
+        self._padding = is_padding
+        self._comment = '#'
 
     @property
     def name(self):
@@ -139,27 +139,27 @@ class Field(object):
 
     @property
     def offset(self):
-        return self.__offset
+        return self._offset
 
     @property
     def field_type(self):
-        return self.__field_type
+        return self._field_type
 
     @property
     def size(self):
-        return self.__size
+        return self._size
 
     @property
     def padding(self):
-        return self.__padding
+        return self._padding
 
     @property
     def comment(self):
-        return self.__comment
+        return self._comment
 
     @comment.setter
     def comment(self, txt):
-        self.__comment = '# %s' % txt
+        self._comment = '# %s' % txt
 
     def is_string(self):  # null terminated
         return self.field_type in [STRING, STRING16, STRINGNULL, STRING_POINTER]
@@ -229,8 +229,9 @@ class Field(object):
     def __str__(self):
         return '<Field offset:%d size:%s t:%s>' % (self.offset, self.size, self.field_type)
 
-    def get_signature(self):
-        return self.field_type, self.size
+    def _get_signature(self):
+        return self.field_type.signature, self.size
+    signature = property(_get_signature, None, None, "Field Signature")
 
     def to_string(self, value):
         if value is None:
@@ -244,7 +245,7 @@ class Field(object):
         elif self.is_string():
             comment = '#  %s %s: %s' % (self.comment, self.field_type.name, value)
         elif self.is_record():
-            comment = '#'
+            comment = '# field struct %s' % self.type_name
         else:
             # unknown
             comment = '# %s else bytes:%s' % (self.comment, repr(value))
@@ -322,7 +323,7 @@ class ArrayField(Field):
         return self.__nb_items
 
     def __len__(self):
-        return NotImplementedError
+        return self.__nb_items
 
     def get_typename(self):
         return '%s*%d' % (self.item_type.name, self.nb_items)
@@ -412,7 +413,13 @@ class %s(ctypes.Structure):  # %s
 ''' % (self.type_name, info, fields_string)
         return ctypes_def
 
+    def _get_signature(self):
+        return
+    signature = property(_get_signature, None, None, "The Record type signature")
 
+
+# FIXME, why use RecordType already ?
+# just says its a fieldtypes.STRUCT
 class RecordField(Field, RecordType):
     """
     make a record field
@@ -437,23 +444,23 @@ class InstantiatedField(Field):
     """
 
     def __init__(self, field_decl, parent):
-        self.__field_decl = field_decl
-        Field.__init__(self, self.__field_decl.name, self.__field_decl.offset, self.__field_decl.field_type,
-                       self.__field_decl.size, self.__field_decl.padding)
+        self._field_decl = field_decl
+        Field.__init__(self, self._field_decl.name, self._field_decl.offset, self._field_decl.field_type,
+                       self._field_decl.size, self._field_decl.padding)
         self.__parent = parent
 
     def __getattr__(self, item):
-        for obj in [self] + self.__field_decl.__class__.mro():
+        for obj in [self] + self._field_decl.__class__.mro():
             if item in self.__dict__:
                 if isinstance(self.__dict__[item], property):
                     return self.__dict__[item].fget(self)
                 return self.__dict__[item]
-        for obj in [self.__field_decl] + self.__field_decl.__class__.mro():
+        for obj in [self._field_decl] + self._field_decl.__class__.mro():
             if item in obj.__dict__:
                 if isinstance(obj.__dict__[item], property):
-                    return obj.__dict__[item].fget(self.__field_decl)
-                return obj.__field_decl.__dict__[item]
-        raise AttributeError('field %s not found in %s wrapping %s' % (item, self, self.__field_decl))
+                    return obj.__dict__[item].fget(self._field_decl)
+                return obj._field_decl.__dict__[item]
+        raise AttributeError('field %s not found in %s wrapping %s' % (item, self, self._field_decl))
 
     def __get_value_for_field(self, max_len=120):
         my_bytes = self.__get_value_for_field_inner(max_len)
@@ -500,5 +507,24 @@ class InstantiatedField(Field):
         else:  # bytearray, pointer...
             my_bytes = self.__parent.bytes[self.offset:self.offset + len(self)]
         return my_bytes
+
+    def to_string(self):
+        if self.is_pointer():
+            comment = '# @ 0x%0.8x %s' % (self.value, self.comment)
+        elif self.is_integer():
+            comment = '# 0x%x %s' % (self.value, self.comment)
+        elif self.is_zeroes():
+            comment = '''# %s zeroes: '\\x00'*%d''' % (self.comment, len(self))
+        elif self.is_string():
+            comment = '#  %s %s: %s' % (self.comment, self.field_type.name, self.value)
+        elif self.is_record():
+            comment = '# field struct %s' % self.type_name
+        else:
+            # unknown
+            comment = '# %s else bytes:%s' % (self.comment, repr(self.value))
+        # prep the string
+        fstr = "( '%s' , %s ), %s\n" % (self.name, self.get_typename(), comment)
+        return fstr
+
     #
     value = property(__get_value_for_field, None, None, "Get value from bytes")

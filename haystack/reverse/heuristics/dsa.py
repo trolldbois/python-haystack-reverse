@@ -274,6 +274,9 @@ class FieldReverser(model.AbstractReverser):
         fields, gaps = self._analyze(_record)
         # _record.add_fields(fields)
         # _record.add_fields(gaps)  # , fieldtypes.UNKNOWN
+        # FIXME why not use fieldstypes.STRUCT for type and a field definition ?
+        # is it really worth haveing a definitiion separate ?
+        # yes so we can copy the recordType to other anonnymousstruct
         _record_type = fieldtypes.RecordType('struct_%x' % _record.address, len(_record), fields + gaps)
         _record.set_record_type(_record_type)
         _record.set_reverse_level(self._reverse_level)
