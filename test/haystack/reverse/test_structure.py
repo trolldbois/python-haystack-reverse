@@ -4,17 +4,16 @@
 """Tests for haystack.reverse.structure."""
 
 import logging
+import os
 import unittest
 
-import os
-
-from haystack.reverse import context
+from haystack import dump_loader
 from haystack.reverse import config
-from haystack.reverse import structure
+from haystack.reverse import context
 from haystack.reverse import fieldtypes
+from haystack.reverse import structure
 from haystack.reverse.heuristics import dsa
 from haystack.reverse.heuristics import pointertypes
-from haystack import dump_loader
 
 __author__ = "Loic Jaquemet"
 __copyright__ = "Copyright (C) 2012 Loic Jaquemet"
@@ -156,7 +155,7 @@ class TestStructure2(unittest.TestCase):
         f1 = fieldtypes.Field('f1', 0*word_size, fieldtypes.ZEROES, word_size, False)
         f2 = fieldtypes.Field('f2', 1*word_size, fieldtypes.ZEROES, word_size, False)
         fields = [f1, f2]
-        _record_type = structure.RecordType('struct_test', 2*word_size, fields)
+        _record_type = fieldtypes.RecordType('struct_test', 2 * word_size, fields)
         _record.set_record_type(_record_type)
         # same fields
         self.assertEqual(f1, _record.get_fields()[0])

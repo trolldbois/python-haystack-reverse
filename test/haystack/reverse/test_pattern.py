@@ -25,6 +25,7 @@ Testing pointer patterns recognition.
 
 log = logging.getLogger('test_pattern')
 
+
 class SignatureTests(unittest.TestCase):
     """
     Helper class for signature tests

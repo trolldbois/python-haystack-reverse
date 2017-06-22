@@ -5,23 +5,23 @@
 #
 
 from __future__ import print_function
-import logging
-import pickle
-import numbers
-import weakref
+
 import ctypes
-import sys
-
+import logging
+import numbers
 import os
+import pickle
+import sys
+import weakref
 
-from haystack.reverse import lrucache
-
-
+from . import lrucache
+from . import fieldtypes
 #
 # AnonymousRecord is an instance
 # when we start reversing, we create a RecordType with fields.
 #
 #
+
 
 log = logging.getLogger('structure')
 
@@ -45,7 +45,8 @@ def cache_load(_context, address):
     if not os.access(dumpname, os.F_OK):
         return None
     fname = make_filename_from_addr(_context, address)
-    p = pickle.load(open(fname, 'rb'))
+    with open(fname, 'rb') as fin:
+        p = pickle.load(fin)
     if p is None:
         return None
     p.set_memory_handler(_context.memory_handler)
@@ -58,7 +59,8 @@ def remap_load(_context, address, newmappings):
     if not os.access(dumpname, os.F_OK):
         return None
     fname = make_filename_from_addr(_context, address)
-    p = pickle.load(open(fname, 'rb'))
+    with open(fname, 'rb') as fin:
+        p = pickle.load(fin)
     if p is None:
         return None
     # YES we do want to over-write _memory_handler and bytes
@@ -118,8 +120,9 @@ class CacheWrapper:
             if self.obj() is not None:  #
                 return self.obj()
         try:
-            p = pickle.load(open(self._fname, 'rb'))
-        except EOFError as e:
+            with open(self._fname, 'rb') as fin:
+                p = pickle.load(fin)
+        except (EOFError, ValueError) as e:
             log.error('Could not load %s - removing it %s', self._fname, e)
             os.remove(self._fname)
             raise e  # bad file removed
@@ -191,41 +194,35 @@ class AnonymousRecord(object):
             raise ValueError("a record should have a positive size")
         self._size = size
         self._reverse_level = 0
-        self.__record_type = RecordType('struct_%x' % self.__address, self._size, [])
-        self.reset()  # set fields
-        self.set_name(prefix)
+        self.__record_type = fieldtypes.RecordType('struct_%x' % self.__address, self._size, [])
+        self._resolved = False
+        self._resolvedPointers = False
+        self._reverse_level = 0
+        self._dirty = True
+        self._ctype = None
+        self._bytes = None
+        self.__final = False
+        self._fields = None
+        self.name = prefix
         return
 
-    @property
-    def name(self):
+    def __get_name(self):
         return self._name
 
-    @name.setter
-    def name(self, name):
+    def __set_name(self, name):
         """
         Sets a name for this record.
         :param name: name root for the record
         :return:
         """
-        print("setter")
         if name is None:
-            self._name = self.__record_type.name
+            self._name = self.__record_type.type_name
         else:
             self._name = '%s_%x' % (name, self.__address)
 
-    def set_name(self, name):
-        # deprecated
-        if name is None:
-            self._name = self.__record_type.name
-        else:
-            self._name = '%s_%x' % (name, self.__address)
-
-    def get_name(self):
-        return self._name
-
-    @property
-    def address(self):
+    def __get_address(self):
         return self.__address
+
 
     @property
     def record_type(self):
@@ -247,6 +244,7 @@ class AnonymousRecord(object):
         self._ctype = None
         self._bytes = None
         self.__final = False
+        self._fields = None
         return
 
     def set_record_type(self, record_type, final_type=False):
@@ -254,11 +252,19 @@ class AnonymousRecord(object):
         Assign a reversed record type to this instance.
         That will change the fields types and render this record immutable.
         Any change will have to change the type of this record.
+
+        All inner structure fields will also be changed from RecordField to instantiated RecordField
+
         :param t:
         :return:
         """
+        # we do not want a loop, so do not instanciate types now.
+        # first double check that the record type contains properly initialised
+        # RecordFields, if any
+        self._fields = None
         self.__record_type = record_type
         self.__final = final_type
+        return
 
     def get_fields(self):
         """
@@ -266,16 +272,20 @@ class AnonymousRecord(object):
 
         :return: list(Field)
         """
-        # we have to check for RecordField
-        # return [f for f in self.__record_type.get_fields()]
-        from haystack.reverse import fieldtypes
+        # we do not want a loop, so do not instanciate types now.
+        # first double check that the record type contains properly initialised
+        # RecordFields, if any
+        if self._fields is not None:
+            return self._fields
         _fields = []
         for f in self.__record_type.get_fields():
             if f.is_record():
-                _fields.append(fieldtypes.RecordField(self, f.offset, f.name, f.field_type.name, f.get_fields()))
+                _fields.append(RecordFieldInstance(self, f))
             else:
-                _fields.append(f)
-        return _fields
+                _fields.append(fieldtypes.InstantiatedField(f, self))
+        # save it, do not save instantiated record type
+        self._fields = _fields
+        return self._fields
 
     def get_field(self, name):
         """
@@ -286,7 +296,8 @@ class AnonymousRecord(object):
         for f in self.get_fields():
             if f.name == name:
                 return f
-        raise ValueError('No such field named %s', name)
+        # FIXME Field type mro() priority
+        raise ValueError('No such field named %s'% name)
 
     def saveme(self, _context):
         """
@@ -304,7 +315,8 @@ class AnonymousRecord(object):
             # FIXME : loops create pickle loops
             # print self.__dict__.keys()
             log.debug('saving to %s', fname)
-            pickle.dump(self, open(fname, 'wb'))
+            with open(fname, 'wb') as fout:
+                pickle.dump(self, fout)
         except pickle.PickleError as e:
             # self.struct must be cleaned.
             log.error("Pickling error, file %s removed", fname)
@@ -357,9 +369,15 @@ class AnonymousRecord(object):
         #ret.sort()
         return ret[0]
 
+    def get_memory_handler(self):
+        return self._memory_handler
+
     def set_memory_handler(self, memory_handler):
         self._memory_handler = memory_handler
         self._target = self._memory_handler.get_target_platform()
+
+    def __get_target(self):
+        return self._target
 
     def get_reverse_level(self):
         return self._reverse_level
@@ -372,7 +390,7 @@ class AnonymousRecord(object):
         self.get_fields().sort()
         field_string_lines = []
         for field in self.get_fields():
-            field_value = self.get_value_for_field(field)
+            field_value = field.value
             field_string_lines.append('\t'+field.to_string(field_value))
         fieldsString = '[ \n%s ]' % (''.join(field_string_lines))
         info = 'rlevel:%d SIG:%s size:%d' % (self.get_reverse_level(), self.get_signature_text(), len(self))
@@ -389,7 +407,7 @@ class AnonymousRecord(object):
 class %s(%s):  # %s
   _fields_ = %s
 
-''' % (self.get_name(), final_ctypes, info, fieldsString)
+''' % (self.name, final_ctypes, info, fieldsString)
         return ctypes_def
 
     def __contains__(self, other):
@@ -453,7 +471,7 @@ class %s(%s):  # %s
     def __setstate__(self, d):
         self.__dict__ = d
         if '_name' not in d:
-            self.set_name(None)
+            self.name = None
         return
 
     def __str__(self):
@@ -475,85 +493,81 @@ class %s(%s):  # %s
     def get_type_signature(self):
         return [f.get_signature()[0] for f in self.get_fields()]
 
-    def get_value_for_field(self, _field, max_len=120):
-        my_bytes = self._get_value_for_field(_field, max_len)
-        if isinstance(my_bytes, str):
-            bl = len(str(my_bytes))
-            if bl >= max_len:
-                my_bytes = my_bytes[:max_len // 2] + '...' + \
-                    my_bytes[-(max_len // 2):]  # idlike to see the end
-        return my_bytes
+    # def get_value_for_field(self, _field, max_len=120):
+    #     my_bytes = self._get_value_for_field(_field, max_len)
+    #     if isinstance(my_bytes, str):
+    #         bl = len(str(my_bytes))
+    #         if bl >= max_len:
+    #             my_bytes = my_bytes[:max_len // 2] + '...' + \
+    #                 my_bytes[-(max_len // 2):]  # idlike to see the end
+    #     return my_bytes
+    #
+    # def _get_value_for_field(self, _field, max_len=120):
+    #     from haystack.reverse import fieldtypes
+    #     word_size = self._target.get_word_size()
+    #     if len(_field) == 0:
+    #         return '<-haystack no pattern found->'
+    #     if _field.is_string():
+    #         if _field.field_type == fieldtypes.STRING16:
+    #             try:
+    #                 my_bytes = "%s" % (repr(self.bytes[_field.offset:_field.offset + _field.size].decode('utf-16')))
+    #             except UnicodeDecodeError as e:
+    #                 log.error('ERROR ON : %s', repr(self.bytes[_field.offset:_field.offset + _field.size]))
+    #                 my_bytes = self.bytes[_field.offset:_field.offset + _field.size]
+    #         else:
+    #             my_bytes = "'%s'" % (self.bytes[_field.offset:_field.offset + _field.size])
+    #     elif _field.is_integer():
+    #         # what about endianness ?
+    #         endianess = '<' # FIXME dsa self.endianess
+    #         data = self.bytes[_field.offset:_field.offset + word_size]
+    #         val = self._target.get_target_ctypes_utils().unpackWord(data, endianess)
+    #         return val
+    #     elif _field.is_zeroes():
+    #         my_bytes = repr('\\x00'*len(_field))
+    #     elif _field.is_array():
+    #         my_bytes = self.bytes[_field.offset:_field.offset + len(_field)]
+    #     elif _field.padding or _field.field_type == fieldtypes.UNKNOWN:
+    #         my_bytes = self.bytes[_field.offset:_field.offset + len(_field)]
+    #     elif _field.is_pointer():
+    #         data = self.bytes[_field.offset:_field.offset + word_size]
+    #         if len(data) != word_size:
+    #             print(repr(data), len(data))
+    #             import pdb
+    #             pdb.set_trace()
+    #         val = self._target.get_target_ctypes_utils().unpackWord(data)
+    #         return val
+    #     else:  # bytearray, pointer...
+    #         my_bytes = self.bytes[_field.offset:_field.offset + len(_field)]
+    #     return my_bytes
 
-    def _get_value_for_field(self, _field, max_len=120):
-        from haystack.reverse import fieldtypes
-        word_size = self._target.get_word_size()
-        if len(_field) == 0:
-            return '<-haystack no pattern found->'
-        if _field.is_string():
-            if _field.field_type == fieldtypes.STRING16:
-                try:
-                    my_bytes = "%s" % (repr(self.bytes[_field.offset:_field.offset + _field.size].decode('utf-16')))
-                except UnicodeDecodeError as e:
-                    log.error('ERROR ON : %s', repr(self.bytes[_field.offset:_field.offset + _field.size]))
-                    my_bytes = self.bytes[_field.offset:_field.offset + _field.size]
-            else:
-                my_bytes = "'%s'" % (self.bytes[_field.offset:_field.offset + _field.size])
-        elif _field.is_integer():
-            # what about endianness ?
-            endianess = '<' # FIXME dsa self.endianess
-            data = self.bytes[_field.offset:_field.offset + word_size]
-            val = self._target.get_target_ctypes_utils().unpackWord(data, endianess)
-            return val
-        elif _field.is_zeroes():
-            my_bytes = repr('\\x00'*len(_field))
-        elif _field.is_array():
-            my_bytes = self.bytes[_field.offset:_field.offset + len(_field)]
-        elif _field.padding or _field.field_type == fieldtypes.UNKNOWN:
-            my_bytes = self.bytes[_field.offset:_field.offset + len(_field)]
-        elif _field.is_pointer():
-            data = self.bytes[_field.offset:_field.offset + word_size]
-            if len(data) != word_size:
-                print(repr(data), len(data))
-                import pdb
-                pdb.set_trace()
-            val = self._target.get_target_ctypes_utils().unpackWord(data)
-            return val
-        else:  # bytearray, pointer...
-            my_bytes = self.bytes[_field.offset:_field.offset + len(_field)]
-        return my_bytes
+    name = property(__get_name, __set_name, None, "record name")
+    address = property(__get_address, None, None, "record address")
+    target = property(__get_target, None, None, "shorcut to memory dump target model")
 
 
-class RecordType(object):
+# FIXME maybe dont do multiple inheritance
+# wait we need to be a field, but we want a anonymous record signature too ?
+class RecordFieldInstance(AnonymousRecord, fieldtypes.RecordField):
     """
-    The type of a record.
-
+    make a record field
     """
-    def __init__(self, name, size, fields):
-        self.name = name
-        self.__size = int(size)
-        self.__fields = fields
-        self.__fields.sort()
+    def __init__(self, parent, record_field):
+        size = sum([len(f) for f in record_field.get_fields()])
+        _address = parent.address + record_field.offset
+        #
+        AnonymousRecord.__init__(self, parent.get_memory_handler(), _address, size, record_field.get_typename())
+        self.__reverse_level = parent.get_reverse_level()
+        #
+        fieldtypes.RecordField.__init__(self, record_field.name, record_field.offset, record_field.get_typename(), record_field.get_fields())
+        assert self.field_type == fieldtypes.STRUCT
+        _record_type = fieldtypes.RecordType(record_field.get_typename(), size, record_field.get_fields())
+        #_record_type = record_field
+        # recursively sets the record
+        self.set_record_type(_record_type)
+        return
 
-    def get_fields(self):
-        return [x for x in self.__fields]
-
-    def __len__(self):
-        return int(self.__size)
-
-    def to_string(self):
-        # print self.fields
-        self.__fields.sort()
-        field_string_lines = []
-        for field in self.__fields:
-            field_string_lines.append('\t'+field.to_string(None))
-        fields_string = '[ \n%s ]' % (''.join(field_string_lines))
-        info = 'size:%d' % len(self)
-        ctypes_def = '''
-class %s(ctypes.Structure):  # %s
-  _fields_ = %s
-
-''' % (self.name, info, fields_string)
-        return ctypes_def
+    def get_typename(self):
+        return '%s' % self.field_type
 
 
 class ReversedType(ctypes.Structure):

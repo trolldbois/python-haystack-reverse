@@ -5,15 +5,20 @@
 #
 
 import logging
-import ctypes
-
-from haystack.reverse import config
-from haystack.reverse import structure
-
 
 """
 the Python classes to represent the guesswork record and field typing of
 allocations.
+
+Field is the base class of a Field declaration. Offset, name, type.
+RecordField is "just" a field with a field_type of STRUCT., an offset, a field name, a type, and the declaration of its type
+    The declaration of its type is as part of it's RecordType inheritance.
+    field_type is not renamed to RecordType's name.
+
+Now each field will get instanciated when AnonymousStruct returns get_fields(), 
+and these instance inherits the Field and the InstanciantedField classes.
+
+InstanciatedField allows access to memory bytes through a value property
 """
 
 
@@ -45,8 +50,8 @@ class FieldType(object):
     def signature(self):
         return self.__sig
 
-    def __lt__(self, other):
-        return self.id < other.id
+    def __eq__(self, other):
+        return self.id == other.id
 
     def __hash__(self):
         return hash(self.id)
@@ -58,37 +63,36 @@ class FieldType(object):
         return '<t:%s>' % self.name
 
 
-class FieldTypeStruct(FieldType):
-    """
-    Fields that are know independent structure.
-    In case we reverse a Big record that has members of known record types.
-    """
-
-    def __init__(self, _typename):
-        assert isinstance(_typename, str)
-        super(FieldTypeStruct, self).__init__(0x1, _typename, 'K')
-
-    def __str__(self):
-        return self.name
-
-
-class FieldTypeArray(FieldType):
-    """
-    An array type
-    """
-    def __init__(self, item_type, item_size, nb_items):
-        super(FieldTypeArray, self).__init__(0x60, '%s*%d' % (item_type.name, nb_items), 'a')
-        self.nb_items = nb_items
-        self.item_type = item_type
-        self.item_size = item_size
-        self.size = item_size*nb_items
-
-
-class RecordTypePointer(FieldType):
-    def __init__(self, _type):
-        #if typ == STRING:
-        #    return STRING_POINTER
-        super(RecordTypePointer, self).__init__(_type.id + 0xa, 'ctypes.POINTER(%s)' % _type.name, 'P')
+# class FieldTypeStruct(FieldType):
+#     """
+#     Fields that are really inner records type (structure).
+#     """
+#
+#     def __init__(self, _typename):
+#         assert isinstance(_typename, str)
+#         super(FieldTypeStruct, self).__init__(0x1, _typename, 'K')
+#
+#     def __str__(self):
+#         return self.name
+#
+#
+# class FieldTypeArray(FieldType):
+#     """
+#     An array type
+#     """
+#     def __init__(self, item_type, item_size, nb_items):
+#         super(FieldTypeArray, self).__init__(0x60, '%s*%d' % (item_type.name, nb_items), 'a')
+#         self.nb_items = nb_items
+#         self.item_type = item_type
+#         self.item_size = item_size
+#         self.size = item_size*nb_items
+#
+#
+# class RecordTypePointer(FieldType):
+#     def __init__(self, _type):
+#         #if typ == STRING:
+#         #    return STRING_POINTER
+#         super(RecordTypePointer, self).__init__(_type.id + 0xa, 'ctypes.POINTER(%s)' % _type.name, 'P')
 
 
 # setup all the know types that are interesting to us
@@ -114,7 +118,7 @@ class Field(object):
     Class that represent a Field instance, a FieldType instance.
     """
     def __init__(self, name, offset, _type, size, is_padding):
-        self.__name = name
+        self._name = name
         self.__offset = offset
         assert isinstance(_type, FieldType)
         self.__field_type = _type
@@ -124,14 +128,14 @@ class Field(object):
 
     @property
     def name(self):
-        return self.__name
+        return self._name
 
     @name.setter
     def name(self, _name):
         if _name is None:
-            self.__name = '%s_%s' % (self.field_type.name, self.offset)
+            self._name = '%s_%s' % (self.field_type.name, self.offset)
         else:
-            self.__name = _name
+            self._name = _name
 
     @property
     def offset(self):
@@ -162,16 +166,17 @@ class Field(object):
 
     def is_pointer(self):
         # we could be a pointer or a pointer string
-        return issubclass(self.__class__, PointerField)
+        # return issubclass(self.__class__, PointerField)
+        return self.field_type in [POINTER, STRING_POINTER]
 
     def is_zeroes(self):
         return self.field_type == ZEROES
 
     def is_array(self):  # will be overloaded
-        return self.field_type == ARRAY or self.field_type == BYTEARRAY
+        return self.field_type in [ARRAY, BYTEARRAY]
 
     def is_integer(self):
-        return self.field_type == INTEGER or self.field_type == SMALLINT or self.field_type == SIGNED_SMALLINT
+        return self.field_type in [INTEGER, SMALLINT, SIGNED_SMALLINT]
 
     def is_record(self):
         return self.field_type == STRUCT
@@ -192,26 +197,28 @@ class Field(object):
     def __hash__(self):
         return hash((self.offset, self.size, self.field_type))
 
-    # FIXME python 3
     def __lt__(self, other):
         return self.offset < other.offset
 
-    # FIXME obselete
-    def __cmp__(self, other):
-        # XXX : Perf... cmp sux
-        try:
-            if self.offset < other.offset:
-                return -1
-            elif self.offset > other.offset:
-                return 1
-            elif (self.offset, self.size, self.field_type) == (other.offset, other.size, other.field_type):
-                return 0
-            # last chance, expensive cmp
-            return cmp((self.offset, self.size, self.field_type),
-                       (other.offset, other.size, other.field_type))
-        except AttributeError as e:
-            # if not isinstance(other, Field):
-            return -1
+    def __eq__(self, other):
+        return self.field_type == other.field_type and self.offset == other.offset
+
+    # # FIXME obselete
+    # def __cmp__(self, other):
+    #     # XXX : Perf... cmp sux
+    #     try:
+    #         if self.offset < other.offset:
+    #             return -1
+    #         elif self.offset > other.offset:
+    #             return 1
+    #         elif (self.offset, self.size, self.field_type) == (other.offset, other.size, other.field_type):
+    #             return 0
+    #         # last chance, expensive cmp
+    #         return cmp((self.offset, self.size, self.field_type),
+    #                    (other.offset, other.size, other.field_type))
+    #     except AttributeError as e:
+    #         # if not isinstance(other, Field):
+    #         return -1
 
     def __len__(self):
         return int(self.size)  # some long come and goes
@@ -248,12 +255,14 @@ class Field(object):
 
 class PointerField(Field):
     """
-    represent a pointer field
+    represent a pointer field.
+    attributes such as ext_lib should be in this, because its a type information, most probably (fn pointer..)
+    really, we should have a function_pointer subtype
     """
     def __init__(self, name, offset, size):
         super(PointerField, self).__init__(name, offset, POINTER, size, False)
         self.__pointee = None
-        self.__pointer_to_ext_lib = False\
+        self.__pointer_to_ext_lib = False
         # ??
         self._child_addr = 0
         self._child_desc = None
@@ -293,12 +302,31 @@ class ArrayField(Field):
     Represents an array field.
     """
     # , basicTypename, basicTypeSize ): # use first element to get that info
-    def __init__(self, name, offset, item_type, item_size, nb_item):
-        size = item_size * nb_item
-        super(ArrayField, self).__init__(name, offset, FieldTypeArray(item_type, item_size, nb_item), size, False)
+    def __init__(self, name, offset, item_type, item_size, nb_items):
+        size = item_size * nb_items
+        self.__item_type = item_type
+        self.__item_size = item_size
+        self.__nb_items = nb_items
+        super(ArrayField, self).__init__(name, offset, ARRAY, size, False)
+
+    @property
+    def item_type(self):
+        return self.__item_type
+
+    @property
+    def item_size(self):
+        return self.__item_size
+
+    @property
+    def nb_items(self):
+        return self.__nb_items
+
+    def __len__(self):
+        return NotImplementedError
 
     def get_typename(self):
-        return self.field_type.name
+        return '%s*%d' % (self.item_type.name, self.nb_items)
+        #return self.field_type.name
 
     def is_array(self):
         return True
@@ -307,7 +335,7 @@ class ArrayField(Field):
         return None
 
     def to_string(self, _record, prefix=''):
-        item_type = self.field_type.item_type
+        item_type = self.item_type
         # log.debug('P:%s I:%s Z:%s typ:%s' % (item_type.is_pointer(), item_type.is_integer(), item_type.is_zeroes(), item_type.name))
         log.debug("array type: %s", item_type.name)
         #
@@ -327,29 +355,6 @@ class ZeroField(ArrayField):
         return True
 
 
-class RecordField(Field, structure.AnonymousRecord):
-    """
-    make a record field
-    """
-    def __init__(self, parent, offset, field_name, field_type, fields):
-        size = sum([len(f) for f in fields])
-        _address = parent.address + offset
-        structure.AnonymousRecord.__init__(self, parent._memory_handler, _address, size, prefix=None)
-        Field.__init__(self, field_name, offset, FieldTypeStruct(field_type), size, False)
-        structure.AnonymousRecord.set_name(self, field_name)
-        #structure.AnonymousRecord.add_fields(self, fields)
-        _record_type = structure.RecordType(field_type, size,fields)
-        self.set_record_type(_record_type)
-        return
-
-    def get_typename(self):
-        return '%s' % self.field_type
-
-    @property
-    def address(self):
-        raise NotImplementedError('You cannot call address on a subrecord')
-
-
 #    def to_string(self, *args):
 #        # print self.fields
 #        fieldsString = '[ \n%s ]' % (''.join([field.to_string(self, '\t') for field in self.get_fields()]))
@@ -360,3 +365,140 @@ class RecordField(Field, structure.AnonymousRecord):
 #
 #''' % (self.name, info, fieldsString)
 #        return ctypes_def
+
+class RecordType(object):
+    """
+    The type of a record.
+
+    """
+    def __init__(self, name, size, fields):
+        self.__type_name = name
+        self.__size = int(size)
+        self._fields = fields
+        self._fields.sort()
+
+    def get_fields(self):
+        return [x for x in self._fields]
+
+    def get_field(self, name):
+        for f in self.get_fields():
+            if f.name == name:
+                return f
+        raise ValueError('No such field named %s', name)
+
+    @property
+    def size(self):
+        return len(self)
+
+    @property
+    def type_name(self):
+        return self.__type_name
+
+    def __len__(self):
+        return int(self.__size)
+
+    def to_string(self):
+        # print self.fields
+        self._fields.sort()
+        field_string_lines = []
+        for field in self._fields:
+            field_string_lines.append('\t'+field.to_string(None))
+        fields_string = '[ \n%s ]' % (''.join(field_string_lines))
+        info = 'size:%d' % len(self)
+        ctypes_def = '''
+class %s(ctypes.Structure):  # %s
+  _fields_ = %s
+
+''' % (self.type_name, info, fields_string)
+        return ctypes_def
+
+
+class RecordField(Field, RecordType):
+    """
+    make a record field
+    """
+    def __init__(self, field_name, offset, field_type_name, fields):
+        size = sum([len(f) for f in fields])
+        self.__type_name = field_type_name
+        RecordType.__init__(self, field_type_name, size, fields)
+        # the name is the name of the field
+        Field.__init__(self, field_name, offset, STRUCT, size, False)
+        # is_record() should return true
+        assert self.field_type == STRUCT
+
+    #@deprecated
+    def get_typename(self):
+        return self.type_name
+
+
+class InstantiatedField(Field):
+    """
+    An instanciated field
+    """
+
+    def __init__(self, field_decl, parent):
+        self.__field_decl = field_decl
+        Field.__init__(self, self.__field_decl.name, self.__field_decl.offset, self.__field_decl.field_type,
+                       self.__field_decl.size, self.__field_decl.padding)
+        self.__parent = parent
+
+    def __getattr__(self, item):
+        for obj in [self] + self.__field_decl.__class__.mro():
+            if item in self.__dict__:
+                if isinstance(self.__dict__[item], property):
+                    return self.__dict__[item].fget(self)
+                return self.__dict__[item]
+        for obj in [self.__field_decl] + self.__field_decl.__class__.mro():
+            if item in obj.__dict__:
+                if isinstance(obj.__dict__[item], property):
+                    return obj.__dict__[item].fget(self.__field_decl)
+                return obj.__field_decl.__dict__[item]
+        raise AttributeError('field %s not found in %s wrapping %s' % (item, self, self.__field_decl))
+
+    def __get_value_for_field(self, max_len=120):
+        my_bytes = self.__get_value_for_field_inner(max_len)
+        if isinstance(my_bytes, str):
+            bl = len(str(my_bytes))
+            if bl >= max_len:
+                my_bytes = my_bytes[:max_len // 2] + '...' + \
+                    my_bytes[-(max_len // 2):]  # idlike to see the end
+        return my_bytes
+
+    def __get_value_for_field_inner(self, max_len=120):
+        word_size = self.__parent.target.get_word_size()
+        if len(self) == 0:
+            return '<-haystack no pattern found->'
+        if self.is_string():
+            if self.field_type == STRING16:
+                try:
+                    my_bytes = "%s" % (repr(self.__parent.bytes[self.offset:self.offset + self.size].decode('utf-16')))
+                except UnicodeDecodeError as e:
+                    log.error('ERROR ON : %s', repr(self.__parent.bytes[self.offset:self.offset + self.size]))
+                    my_bytes = self.__parent.bytes[self.offset:self.offset + self.size]
+            else:
+                my_bytes = "'%s'" % (self.__parent.bytes[self.offset:self.offset + self.size])
+        elif self.is_integer():
+            # what about endianness ?
+            endianess = '<' # FIXME dsa self.endianess
+            data = self.__parent.bytes[self.offset:self.offset + word_size]
+            val = self.__parent.target.get_target_ctypes_utils().unpackWord(data, endianess)
+            return val
+        elif self.is_zeroes():
+            my_bytes = repr('\\x00'*len(self))
+        elif self.is_array():
+            my_bytes = self.__parent.bytes[self.offset:self.offset + len(self)]
+        elif self.padding or self.field_type == UNKNOWN:
+            my_bytes = self.__parent.bytes[self.offset:self.offset + len(self)]
+        elif self.is_pointer():
+            data = self.__parent.bytes[self.offset:self.offset + word_size]
+            if len(data) != word_size:
+                print(repr(data), len(data))
+                import pdb
+                pdb.set_trace()
+            val = self.__parent.target.get_target_ctypes_utils().unpackWord(data)
+            return val
+        else:  # bytearray, pointer...
+            my_bytes = self.__parent.bytes[self.offset:self.offset + len(self)]
+        return my_bytes
+    #
+    value = property(__get_value_for_field, None, None, "Get value from bytes")

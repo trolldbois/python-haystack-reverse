@@ -4,16 +4,16 @@
 """Tests for haystack.reverse.structure."""
 
 from __future__ import print_function
+
 import logging
 import unittest
 
-from haystack.reverse import context
+from haystack import dump_loader
 from haystack.reverse import config
-from haystack.reverse.heuristics import dsa
+from haystack.reverse import context
 from haystack.reverse import fieldtypes
 from haystack.reverse import structure
-from haystack import dump_loader
-
+from haystack.reverse.heuristics import dsa
 from test.haystack import SrcTests
 
 log = logging.getLogger('test_fieldtypes')
@@ -86,7 +86,7 @@ class TestField(SrcTests):
         f1 = fieldtypes.Field('f1', 0*word_size, fieldtypes.ZEROES, word_size, False)
         f2 = fieldtypes.Field('f2', 1*word_size, fieldtypes.ZEROES, word_size, False)
         fields = [f1, f2]
-        _record_type = structure.RecordType('struct_text', 2*word_size, fields)
+        _record_type = fieldtypes.RecordType('struct_text', 2 * word_size, fields)
         _record.set_record_type(_record_type)
 
         self.assertEqual(f1, _record.get_fields()[0])
@@ -105,12 +105,12 @@ class TestField(SrcTests):
         fs3 = fieldtypes.PointerField('Next', 1*word_size, word_size)
         fs3.value = start
         # the new field sub record
-        new_field = fieldtypes.RecordField(_record, 1*word_size, 'list', 'LIST_ENTRY', [fs2, fs3])
+        new_field = fieldtypes.RecordField('list', 1*word_size, 'LIST_ENTRY', [fs2, fs3])
         # fieldtypes.FieldType.makeStructField(_record, 1*word_size, 'LIST_ENTRY', [fs2, fs3], 'list')
         # add them
         fields = [f1, new_field, f4]
         #_record.add_fields(fields)
-        _record_type = structure.RecordType('struct_text', 40, fields)
+        _record_type = fieldtypes.RecordType('struct_text', 40, fields)
         _record.set_record_type(_record_type)
         self.assertEqual(len(_record), 40)
         f1, f2, f3 = _record.get_fields()
@@ -119,8 +119,8 @@ class TestField(SrcTests):
         self.assertEqual(len(f3), word_size)
 
         self.assertEqual(f2.name, 'list')
-        self.assertIsInstance(f2.field_type, fieldtypes.FieldTypeStruct)
-        self.assertEqual(f2.field_type.name, 'LIST_ENTRY')
+        self.assertEqual(f2.field_type, fieldtypes.STRUCT)
+        self.assertEqual(f2.type_name, 'LIST_ENTRY')
 
         print(_record.to_string())
 
