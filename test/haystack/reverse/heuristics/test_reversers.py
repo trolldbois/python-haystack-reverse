@@ -160,7 +160,9 @@ class TestDoubleLinkedReverser(SrcTests):
         self.assertEqual(start.record_type, end.record_type)
         self.assertEqual(mid.record_type, end.record_type)
         # and get_fields produce different list of the same fields
-        self.assertEqual(start.get_fields(), end.get_fields())
+        self.assertEqual(start.record_type.get_fields(), end.record_type.get_fields())
+        # but not the same instance
+        self.assertNotEqual(start.get_fields(), end.get_fields())
 
         # get the pointer value and iterate over each item
         item_list_entry_addr = start_addr+offset

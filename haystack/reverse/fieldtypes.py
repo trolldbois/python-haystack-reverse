@@ -7,29 +7,44 @@
 import logging
 
 """
-the Python classes to represent the guesswork record and field typing of
-allocations.
+the Python classes to represent the types of reversed structures.
 
-Field is the base class of a Field declaration. Offset, name, type.
-RecordField is "just" a field with a field_type of STRUCT., an offset, a field name, a type, and the declaration of its type
-    The declaration of its type is as part of it's RecordType inheritance.
-    field_type is not renamed to RecordType's name.
 
-Now each field will get instanciated when AnonymousStruct returns get_fields(), 
-and these instance inherits the Field and the InstanciantedField classes.
+Declaration classes:
+- FieldType is the basic type of a field. int, array, pointer, record.... an id, fixed base type name, and a signature.
+- Field is a Field declaration. Offset, name, FieldType.
+    specialised subclasses are ArrayField, PointerField, ZeroField
+- RecordType is the record declaration. type name, total size, Fields.
+    total size should be equals to size of fields, but declaration is opened to gaps/missing fields.
 
-InstanciatedField allows access to memory bytes through a value property
+- RecordField is a field that is a record declaration with a fieldtype of STRUCT.
+    it has a field name, and a type name, an offset (its a field) 
+
+1. the get_fields() method/property on RecordType, or RecordField, returns a list of Field
+2. the signature property of a RecordType, or a Field
+3. no declaration classes should allow to query for a value. This is the role of FieldInstance.
+
+
+Instance classes (in structure.py):
+- AnonymousRecord is the instance of a RecordType at a specific address.
+- FieldInstance is the instance of a field, inside a AnonymousRecord, associated to an address.
+
+4. instances can return values for field through the value property
+    AnonymousRecord does not have a value property.
+5. record instances have a get_fields() method/property iterator that returns instanciated field
+    no full tree instanciation of fields, to avoid loops.
+    FIXME: is there a dictionnary to keep dups out ?
+
+InstantiatedField allows access to memory bytes through a value property
 """
 
 
 log = logging.getLogger('field')
 
-# Field related functions and classes
-
 
 class FieldType(object):
     """
-    Represents the type of a field.
+    the basic type of a field. int, array, pointer, record.... an id, fixed base type name, and a signature.
     """
     types = set()
 
@@ -63,36 +78,81 @@ class FieldType(object):
         return '<t:%s>' % self.name
 
 
-# class FieldTypeStruct(FieldType):
-#     """
-#     Fields that are really inner records type (structure).
-#     """
-#
-#     def __init__(self, _typename):
-#         assert isinstance(_typename, str)
-#         super(FieldTypeStruct, self).__init__(0x1, _typename, 'K')
-#
-#     def __str__(self):
-#         return self.name
-#
-#
-# class FieldTypeArray(FieldType):
-#     """
-#     An array type
-#     """
-#     def __init__(self, item_type, item_size, nb_items):
-#         super(FieldTypeArray, self).__init__(0x60, '%s*%d' % (item_type.name, nb_items), 'a')
-#         self.nb_items = nb_items
-#         self.item_type = item_type
-#         self.item_size = item_size
-#         self.size = item_size*nb_items
-#
-#
-# class RecordTypePointer(FieldType):
-#     def __init__(self, _type):
-#         #if typ == STRING:
-#         #    return STRING_POINTER
-#         super(RecordTypePointer, self).__init__(_type.id + 0xa, 'ctypes.POINTER(%s)' % _type.name, 'P')
+class RecordType(object):
+    """
+    the record declaration. type name, total size, Fields.
+    total size should be equals to size of fields, but declaration is opened to gaps/missing fields.
+    """
+    def __init__(self, name, size, fields):
+        self.__type_name = name
+        self.__size = int(size)
+        self._fields = fields
+        self._fields.sort()
+
+    def get_fields(self):
+        return [x for x in self._fields]
+
+    def get_field(self, name):
+        for f in self.get_fields():
+            if f.name == name:
+                return f
+        raise ValueError('No such field named %s', name)
+
+    def get_field_at_offset(self, offset):
+        """
+        returns the field at a specific offset in this structure
+        """
+        if offset < 0 or offset > len(self):
+            raise IndexError("Invalid offset")
+        ## if self.get_reverse_level() < 10:
+        ##    raise StructureNotResolvedError("Reverse level %d is too low for record 0x%x", self.get_reverse_level(), self.address)
+        # find the field
+        ret = [f for f in self.get_fields() if f.offset == offset]
+        if len(ret) == 0:
+            # then check for closest match
+            ret = sorted([f for f in self.get_fields() if f.offset < offset])
+            if len(ret) == 0:
+                raise ValueError("Offset 0x%x is not in structure?!" % offset)  # not possible
+            # the last field standing is the one ( ordered fields)
+            ret = ret[-1]
+            if offset < ret.field_type.offset + len(ret):
+                return ret
+            # in between fields. Can happens on un-analyzed structure.
+            # or byte field
+            raise IndexError('Offset 0x%x is in middle of field at offset 0x%x' % offset, ret.offset)
+        elif len(ret) != 1:
+            raise RuntimeError("there shouldn't multiple fields at the same offset")
+        return ret[0]
+
+    @property
+    def signature(self):
+        return ''.join([f.signature for f in self.get_fields()])
+
+    @property
+    def size(self):
+        return len(self)
+
+    @property
+    def type_name(self):
+        return self.__type_name
+
+    def __len__(self):
+        return int(self.__size)
+
+    def to_string(self):
+        # print self.fields
+        self._fields.sort()
+        field_string_lines = []
+        for field in self._fields:
+            field_string_lines.append('\t' + field.to_string())
+        fields_string = '[ \n%s ]' % (''.join(field_string_lines))
+        info = 'size:%d' % len(self)
+        ctypes_def = '''
+class %s(ctypes.Structure):  # %s
+  _fields_ = %s
+
+''' % (self.type_name, info, fields_string)
+        return ctypes_def
 
 
 # setup all the know types that are interesting to us
@@ -115,7 +175,8 @@ PADDING = FieldType(0xff, 'ctypes.c_ubyte', 'X')
 
 class Field(object):
     """
-    Class that represent a Field instance, a FieldType instance.
+    is a Field declaration. Offset, name, FieldType.
+    specialised subclasses are ArrayField, PointerField, ZeroField
     """
     def __init__(self, name, offset, _type, size, is_padding):
         self._name = name
@@ -161,6 +222,10 @@ class Field(object):
     def comment(self, txt):
         self._comment = '# %s' % txt
 
+    @property
+    def signature(self):
+        return self.field_type.signature, self.size
+
     def is_string(self):  # null terminated
         return self.field_type in [STRING, STRING16, STRINGNULL, STRING_POINTER]
 
@@ -198,27 +263,14 @@ class Field(object):
         return hash((self.offset, self.size, self.field_type))
 
     def __lt__(self, other):
+        if not isinstance(other, Field):
+            return False
         return self.offset < other.offset
 
     def __eq__(self, other):
+        if not isinstance(other, Field):
+            return False
         return self.field_type == other.field_type and self.offset == other.offset
-
-    # # FIXME obselete
-    # def __cmp__(self, other):
-    #     # XXX : Perf... cmp sux
-    #     try:
-    #         if self.offset < other.offset:
-    #             return -1
-    #         elif self.offset > other.offset:
-    #             return 1
-    #         elif (self.offset, self.size, self.field_type) == (other.offset, other.size, other.field_type):
-    #             return 0
-    #         # last chance, expensive cmp
-    #         return cmp((self.offset, self.size, self.field_type),
-    #                    (other.offset, other.size, other.field_type))
-    #     except AttributeError as e:
-    #         # if not isinstance(other, Field):
-    #         return -1
 
     def __len__(self):
         return int(self.size)  # some long come and goes
@@ -229,26 +281,17 @@ class Field(object):
     def __str__(self):
         return '<Field offset:%d size:%s t:%s>' % (self.offset, self.size, self.field_type)
 
-    def _get_signature(self):
-        return self.field_type.signature, self.size
-    signature = property(_get_signature, None, None, "Field Signature")
-
-    def to_string(self, value):
-        if value is None:
-            value = 0
-        if self.is_pointer():
-            comment = '# @ 0x%0.8x %s' % (value, self.comment)
-        elif self.is_integer():
-            comment = '# 0x%x %s' % (value, self.comment)
-        elif self.is_zeroes():
-            comment = '''# %s zeroes: '\\x00'*%d''' % (self.comment, len(self))
+    def to_string(self):
+        if self.is_pointer() or self.is_integer():
+            comment = '# %s' % self.comment
         elif self.is_string():
-            comment = '#  %s %s: %s' % (self.comment, self.field_type.name, value)
-        elif self.is_record():
-            comment = '# field struct %s' % self.type_name
+            comment = '#  %s %s' % (self.comment, self.field_type.name)
+        # moved to specialised classe
+        elif self.is_record() or self.is_zeroes():
+            raise TypeError('This is not reachable')
         else:
             # unknown
-            comment = '# %s else bytes:%s' % (self.comment, repr(value))
+            comment = '# %s else' % (self.comment )
         # prep the string
         fstr = "( '%s' , %s ), %s\n" % (self.name, self.get_typename(), comment)
         return fstr
@@ -335,13 +378,13 @@ class ArrayField(Field):
     def _get_value(self, _record, maxLen=120):
         return None
 
-    def to_string(self, _record, prefix=''):
+    def to_string(self):
         item_type = self.item_type
         # log.debug('P:%s I:%s Z:%s typ:%s' % (item_type.is_pointer(), item_type.is_integer(), item_type.is_zeroes(), item_type.name))
         log.debug("array type: %s", item_type.name)
         #
         comment = '# %s array' % self.comment
-        fstr = "%s( '%s' , %s ), %s\n" % (prefix, self.name, self.get_typename(), comment)
+        fstr = "( '%s' , %s ), %s\n" % (self.name, self.get_typename(), comment)
         return fstr
 
 
@@ -355,71 +398,11 @@ class ZeroField(ArrayField):
     def is_zeroes(self):
         return True
 
-
-#    def to_string(self, *args):
-#        # print self.fields
-#        fieldsString = '[ \n%s ]' % (''.join([field.to_string(self, '\t') for field in self.get_fields()]))
-#        info = 'rlevel:%d SIG:%s size:%d' % (self.get_reverse_level(), self.get_signature(), len(self))
-#        ctypes_def = '''
-#class %s(ctypes.Structure):  # %s
-#  _fields_ = %s
-#
-#''' % (self.name, info, fieldsString)
-#        return ctypes_def
-
-class RecordType(object):
-    """
-    The type of a record.
-
-    """
-    def __init__(self, name, size, fields):
-        self.__type_name = name
-        self.__size = int(size)
-        self._fields = fields
-        self._fields.sort()
-
-    def get_fields(self):
-        return [x for x in self._fields]
-
-    def get_field(self, name):
-        for f in self.get_fields():
-            if f.name == name:
-                return f
-        raise ValueError('No such field named %s', name)
-
-    @property
-    def size(self):
-        return len(self)
-
-    @property
-    def type_name(self):
-        return self.__type_name
-
-    def __len__(self):
-        return int(self.__size)
-
     def to_string(self):
-        # print self.fields
-        self._fields.sort()
-        field_string_lines = []
-        for field in self._fields:
-            field_string_lines.append('\t'+field.to_string(None))
-        fields_string = '[ \n%s ]' % (''.join(field_string_lines))
-        info = 'size:%d' % len(self)
-        ctypes_def = '''
-class %s(ctypes.Structure):  # %s
-  _fields_ = %s
+        comment = '''# %s zeroes: '\\x00'*%d''' % (self.comment, len(self))
+        fstr = "( '%s' , %s ), %s\n" % (self.name, self.get_typename(), comment)
+        return fstr
 
-''' % (self.type_name, info, fields_string)
-        return ctypes_def
-
-    def _get_signature(self):
-        return
-    signature = property(_get_signature, None, None, "The Record type signature")
-
-
-# FIXME, why use RecordType already ?
-# just says its a fieldtypes.STRUCT
 class RecordField(Field, RecordType):
     """
     make a record field
@@ -433,98 +416,7 @@ class RecordField(Field, RecordType):
         # is_record() should return true
         assert self.field_type == STRUCT
 
-    #@deprecated
-    def get_typename(self):
-        return self.type_name
-
-
-class InstantiatedField(Field):
-    """
-    An instanciated field
-    """
-
-    def __init__(self, field_decl, parent):
-        self._field_decl = field_decl
-        Field.__init__(self, self._field_decl.name, self._field_decl.offset, self._field_decl.field_type,
-                       self._field_decl.size, self._field_decl.padding)
-        self.__parent = parent
-
-    def __getattr__(self, item):
-        for obj in [self] + self._field_decl.__class__.mro():
-            if item in self.__dict__:
-                if isinstance(self.__dict__[item], property):
-                    return self.__dict__[item].fget(self)
-                return self.__dict__[item]
-        for obj in [self._field_decl] + self._field_decl.__class__.mro():
-            if item in obj.__dict__:
-                if isinstance(obj.__dict__[item], property):
-                    return obj.__dict__[item].fget(self._field_decl)
-                return obj._field_decl.__dict__[item]
-        raise AttributeError('field %s not found in %s wrapping %s' % (item, self, self._field_decl))
-
-    def __get_value_for_field(self, max_len=120):
-        my_bytes = self.__get_value_for_field_inner(max_len)
-        if isinstance(my_bytes, str):
-            bl = len(str(my_bytes))
-            if bl >= max_len:
-                my_bytes = my_bytes[:max_len // 2] + '...' + \
-                    my_bytes[-(max_len // 2):]  # idlike to see the end
-        return my_bytes
-
-    def __get_value_for_field_inner(self, max_len=120):
-        word_size = self.__parent.target.get_word_size()
-        if len(self) == 0:
-            return '<-haystack no pattern found->'
-        if self.is_string():
-            if self.field_type == STRING16:
-                try:
-                    my_bytes = "%s" % (repr(self.__parent.bytes[self.offset:self.offset + self.size].decode('utf-16')))
-                except UnicodeDecodeError as e:
-                    log.error('ERROR ON : %s', repr(self.__parent.bytes[self.offset:self.offset + self.size]))
-                    my_bytes = self.__parent.bytes[self.offset:self.offset + self.size]
-            else:
-                my_bytes = "'%s'" % (self.__parent.bytes[self.offset:self.offset + self.size])
-        elif self.is_integer():
-            # what about endianness ?
-            endianess = '<' # FIXME dsa self.endianess
-            data = self.__parent.bytes[self.offset:self.offset + word_size]
-            val = self.__parent.target.get_target_ctypes_utils().unpackWord(data, endianess)
-            return val
-        elif self.is_zeroes():
-            my_bytes = repr('\\x00'*len(self))
-        elif self.is_array():
-            my_bytes = self.__parent.bytes[self.offset:self.offset + len(self)]
-        elif self.padding or self.field_type == UNKNOWN:
-            my_bytes = self.__parent.bytes[self.offset:self.offset + len(self)]
-        elif self.is_pointer():
-            data = self.__parent.bytes[self.offset:self.offset + word_size]
-            if len(data) != word_size:
-                print(repr(data), len(data))
-                import pdb
-                pdb.set_trace()
-            val = self.__parent.target.get_target_ctypes_utils().unpackWord(data)
-            return val
-        else:  # bytearray, pointer...
-            my_bytes = self.__parent.bytes[self.offset:self.offset + len(self)]
-        return my_bytes
-
     def to_string(self):
-        if self.is_pointer():
-            comment = '# @ 0x%0.8x %s' % (self.value, self.comment)
-        elif self.is_integer():
-            comment = '# 0x%x %s' % (self.value, self.comment)
-        elif self.is_zeroes():
-            comment = '''# %s zeroes: '\\x00'*%d''' % (self.comment, len(self))
-        elif self.is_string():
-            comment = '#  %s %s: %s' % (self.comment, self.field_type.name, self.value)
-        elif self.is_record():
-            comment = '# field struct %s' % self.type_name
-        else:
-            # unknown
-            comment = '# %s else bytes:%s' % (self.comment, repr(self.value))
-        # prep the string
+        comment = '# field struct %s' % self.type_name
         fstr = "( '%s' , %s ), %s\n" % (self.name, self.get_typename(), comment)
         return fstr
-
-    #
-    value = property(__get_value_for_field, None, None, "Get value from bytes")
