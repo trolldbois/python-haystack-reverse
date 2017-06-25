@@ -1,4 +1,4 @@
-# .travis.yml for haystack
+# .travis.yml for haystack-reverse
 
 language: python
 
@@ -8,8 +8,6 @@ python:
 
 # we are using pre-dumped tests files
 # and not testing the dumping capacity of haystack.
-# travis-ci does not support llvm 3.7 yet, so lets not put a bunch
-# of dependencies due to ctypeslib2.
 # this test will start from already existing ctypeslib2 generated files.
 # system python package will not be used. http://docs.travis-ci.com/user/languages/python/.
 # numpy is already installed
