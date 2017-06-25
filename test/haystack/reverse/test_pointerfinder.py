@@ -1,29 +1,24 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-#
-# Copyright (C) 2011 Loic Jaquemet loic.jaquemet+python@gmail.com
-#
 from __future__ import print_function
-import haystack.reverse.enumerators
-import haystack.reverse.matchers
 
+import logging
+import timeit
 import unittest
 
-from haystack.mappings.base import MemoryHandler
+from haystack import dump_loader
 from haystack.mappings.base import AMemoryMapping
+from haystack.mappings.base import MemoryHandler
 from haystack.mappings.file import LocalMemoryMapping
 
-from haystack import dump_loader
+import haystack.reverse.enumerators
+import haystack.reverse.matchers
 from haystack.reverse import searchers
-
+from test.testfiles import zeus_856_svchost_exe
 from . import test_pattern
 
-from test.testfiles import zeus_856_svchost_exe
-
-import timeit
-import logging
-
 log = logging.getLogger('test_pointerfinder')
+
 
 class TestPointer(test_pattern.SignatureTests):
 

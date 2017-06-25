@@ -257,8 +257,8 @@ class TestDSA(unittest.TestCase):
         log.debug(st.to_string())
         fields = st.get_fields()
         self.assertEqual(len([_ for _ in fields]), 2)
-        self.assertEqual(fields[1].field_type, fieldtypes.STRING16)
-        self.assertTrue(fields[1].is_string())
+        self.assertEqual(fields[1].type.field_type, fieldtypes.STRING16)
+        self.assertTrue(fields[1].type.is_string())
 
     def test_ascii_null_terminated_2(self):
         """ null terminated """
@@ -268,11 +268,11 @@ class TestDSA(unittest.TestCase):
         st = structure.AnonymousRecord(self.memory_handler, vaddr, size)
         self.dsa.reverse_record(self.context, st)
         # print repr(st.bytes)
-        log.debug(st.to_string())
         fields = st.get_fields()
+        log.debug(st.to_string())
         self.assertEqual(len([_ for _ in fields]), 5)
-        self.assertEqual(fields[3].field_type, fieldtypes.STRINGNULL)
-        self.assertTrue(fields[3].is_string())
+        self.assertEqual(fields[3].type.field_type, fieldtypes.STRINGNULL)
+        self.assertTrue(fields[3].type.is_string())
 
     def test_utf_16_le_null_terminated_3(self):
         ''' null terminated '''
@@ -285,8 +285,8 @@ class TestDSA(unittest.TestCase):
         log.debug(st.to_string())
         fields = st.get_fields()
         self.assertEqual(len([_ for _ in fields]), 2)  # should be 3 Lt0?
-        self.assertEqual(fields[0].field_type, fieldtypes.STRING16)
-        self.assertTrue(fields[0].is_string())
+        self.assertEqual(fields[0].type.field_type, fieldtypes.STRING16)
+        self.assertTrue(fields[0].type.is_string())
 
     def test_big_block(self):
         ''' null terminated '''
@@ -301,7 +301,7 @@ class TestDSA(unittest.TestCase):
         self.assertLess(len([_ for _ in fields]), 879)
         #self.assertEqual( fields[35].field_type.name, fieldtypes.STRINGNULL)
         #self.assertTrue( fields[35].isString())
-        strfields = [f for f in st.get_fields() if f.is_string()]
+        strfields = [f for f in st.get_fields() if f.type.is_string()]
         # for f in strfields:
         #  print f.toString(),
         self.assertGreater(len(strfields), 30)
@@ -317,8 +317,8 @@ class TestDSA(unittest.TestCase):
         log.debug(st.to_string())
         fields = st.get_fields()
         self.assertEqual(len([_ for _ in fields]), 3)
-        self.assertEqual(fields[1].field_type, fieldtypes.STRING16)
-        self.assertTrue(fields[1].is_string())
+        self.assertEqual(fields[1].type.field_type, fieldtypes.STRING16)
+        self.assertTrue(fields[1].type.is_string())
 
         pass
 
@@ -335,7 +335,7 @@ class TestDSA(unittest.TestCase):
         self.assertLess(len([_ for _ in fields]), 890)
         #self.assertEqual( fields[35].field_type.name, fieldtypes.STRINGNULL)
         #self.assertTrue( fields[35].isString())
-        fields = [f for f in st.get_fields() if f.is_string()]
+        fields = [f for f in st.get_fields() if f.type.is_string()]
         # for f in fields:
         #  print f.toString(),
 
@@ -355,8 +355,8 @@ class TestFieldAnalyserReal(unittest.TestCase):
 
         # new test from real case zeus.856 @0xb2e38
         cls.real = b'\xc81\x0b\x00\xa8*\x0b\x00\x01\x00\x00\x00\x00\x00\x00\x00f \x02\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x08\x00\x00\x00\xe0\xa9`\x9dz3\xd0\x11\xbd\x88\x00\x00\xc0\x82\xe6\x9a\xed\x03\x00\x00\x01\x00\x00\x00\xc8\xfc\xbe\x02p\x0c\x00\x00\x08\x00\x00\x00\x1d\x00\x02\x00L\xfd\xbe\x02\xd8\x91\x1b\x01\x00\x00\x00\x00\x06\x00\x00\x00\x02\x00\x00\x00\x10\x00\x00\x00\x10\x00\x00\x00\x01\x00\x00\x00\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00R\x00S\x00V\x00P\x00 \x00T\x00C\x00P\x00 \x00S\x00e\x00r\x00v\x00i\x00c\x00e\x00 \x00P\x00r\x00o\x00v\x00i\x00d\x00e\x00r\x00\x00\x00f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xab\xe9\x90|\xf2\x94\x80|\x00P\xfd\x7f\x00\x00\x1c\x00\x08\x00\x00\x00\x00\x00\x00\x00t\xfc\xbe\x02\\\r\x91|\x00\x00\x1c\x00\x00\x00\xc3\x00\x00\x00\x00\x00\x88\xb0\xd2\x01\\\r\x91|\x00\x00\x1c\x00\x91\x0e\x91|\x08\x06\x1c\x00m\x05\x91|h^\xd0\x01\x00\x00\x00\x00\x08\x00\x00\x00\x00\x00\xc3\x00\x01\x00\x00\x000\x02\x1c\x00\x02\x00\x00\x00\x90\xb0\xd2\x01\x03\x00\x00\x00\x02\x00\x00\x00h^\xd0\x010\x02\x1c\x00\xd8>\xd4\x010\xf0\xfc\x00\xb8\x02\x1c\x00\xe8?\xd4\x01\xd8\x01\x1c\x00\x00\x00\x00\x00\x10\x00\x00\x00\xe8?\xd4\x01\x0c\x00\x00\x00\x05\x00\x00\x00\xf0\x06\x91|\xe0\x01\x1c\x00\x18\x00\x00\x00\xe0>\xd4\x01\x00\x00\x1c\x00\x01\x00\x00\x00\x08\x00\x00\x00\xe0\x01\x1c\x00@\x00\x00\x00\xf0?\xd4\x01\xa8\x04\x1c\x00\x00\x00\x1c\x00Om\x01\x01\x84^\xd0\x01`\x00\x00\x00\xb8\x02\x1c\x00\x00\x00\x00\x00\xd8>\xd4\x01\x88\xfc\xbe\x02F\x0f\x91|\r\x00\x00\x00\xd8>\xd4\x01\x00\x00\x1c\x00\x10<\xd4\x01\x00\x00\x00\x00\\\xfd\xbe\x02\\\r\x91|\x00\x00\x1c\x00\x91\x0e\x91|\x08\x06\x1c\x00m\x05\x91|`\xab\xf0\x00\x00\x00\x00\x00\xec<\xca\x02\x00\x00\xc3\x00\x0c\x00\x00\x00\x10<\xd4\x01\x00\x00\x00\x00\x00\x00\x00\x00\xd0\x0c\x00\x00\x00\x00\x00\x00\x18<\xd4\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xd0\x0c\x00\x00(\xfd\xbe\x02\xa8\x04\x1c\x00\xd0\x0c\x00\x00@\x00\x00\x00\x03\x00\x00\x00\x18<\xd4\x01\xa8\x04\x1c\x00`\xab\xf0\x00\xc8\x02\x00\x00\xec<\xca\x02\x0c\x00\x0e\x00<V_u\x00\x00\x00\x00\xf8\xfc\xbe\x02\xec<\xca\x02\x00\x00\x00\x00`\xab\xf0\x00P\xfd\xbe\x02l\xfb\x90|q\xfb\x90|`\xab\xf0\x00\x00\x00\x00\x00\xec<\xca\x02,\xfd\xbe\x02%SystemRoot%\\system32\\rsvpsp.dll\x00\x003\x00B\x006\x004\x00B\x007\x00}\x00\x00\x00\xbe\x02\x05\x00\x00\x00\xe6-\xfd\x7f\x96\x15\x91|\xeb\x06\x91|\xa4\xfd\xbe\x02 8\xd4\x01\x10\x00\x00\x00\t\x04\x00\x00\x00\x01\x00\x00\xdc\xfa\xbe\x02\x00\x00\x00\x00\x96\x15\x91|\xeb\x06\x91|\x01\x00\x00\x00\xa4\xfd\xbe\x02\x04\x00\x00\x00\xaf\x9f\xd4w\xdc\xfa\xbe\x02\x05\x00\x00\x00\x96\x15\x91|\xeb\x06\x91|\x01\x00\x00\x00\xa4\xfd\xbe\x02\x96\x15\x91|\xeb\x06\x91|\x00\x00\x00\x00\x00\x00\x00\x00X\x00\x00\x00\xeb\x06\x91|\x01\x00\x00\x00\xa4\xfd\xbe\x02\x01\x00\x00\x00\xff\xff\xff\xff\xd8\xa2\x92w\x08\xa3\x92w\xdc\xfa\xbe\x02\xd8\xfa\xbe\x02\x02\x00\x00\x80\x9c\xfa\xbe\x02\x90\x01\x1c\x00\xb0\x01\x00\x00\xe4\xfa\xbe\x02\xff\xff\xff\xff\xe0\xfc\xbe\x02\xab\xa5\x92wh^\xd0\x01\xdc\xfa\xbe\x02\x88\x01\x1c\x00\x00\x00\xc3\x00\x01\x00\x00\x00\x96\x15\x91|\x00\x00\x00\x00'
-        cls.test1 = structure.AnonymousRecord(cls.memory_handler, 0xb2e38, 904, prefix=None)
-        cls.test2 = structure.AnonymousRecord(cls.memory_handler, 0xb2e38 + 636, 100, prefix=None)
+        cls.test1 = structure.AnonymousRecord(cls.memory_handler, 0xb2e38, 904, name=None)
+        cls.test2 = structure.AnonymousRecord(cls.memory_handler, 0xb2e38 + 636, 100, name=None)
 
         pass
 
@@ -373,8 +373,8 @@ class TestFieldAnalyserReal(unittest.TestCase):
         nextoffset = 0
         # test is sorted
         for i, f in enumerate(self.test1.get_fields()):
-            self.assertGreaterEqual(f.offset, nextoffset)
-            nextoffset = f.offset + len(f)
+            self.assertGreaterEqual(f.type.offset, nextoffset)
+            nextoffset = f.type.offset + len(f.type)
 
 
 class TestTextFieldCorrection(unittest.TestCase):
@@ -399,9 +399,9 @@ class TestTextFieldCorrection(unittest.TestCase):
         rev.reverse_record(self.heap_context, _record)
         fields = _record.get_fields()
         self.assertEqual(len(fields), 3)
-        self.assertTrue(fields[0].is_string())
-        self.assertTrue(fields[1].is_string())
-        self.assertTrue(fields[2].is_zeroes())
+        self.assertTrue(fields[0].type.is_string())
+        self.assertTrue(fields[1].type.is_string())
+        self.assertTrue(fields[2].type.is_zeroes())
 
         print(_record.to_string())
 

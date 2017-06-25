@@ -41,9 +41,9 @@ class PyPrepTestsCommand(distutils.cmd.Command):
 
 
 setup(name="haystack-reverse",
-      version="0.40",
+      version="0.41",
       description="Reverse C Structures from a process' memory",
-      long_description=open("README.md").read(),
+      long_description=open("README.rst").read(),
       url="http://packages.python.org/haystack-reverse/",
       download_url="http://github.com/trolldbois/python-haystack-reverse/tree/master",
       license="GPL",
@@ -81,7 +81,7 @@ setup(name="haystack-reverse",
       # numpy is already installed in travis-ci
       # setup_requires=["numpy"],
       # reverse: install requires networkx, numpy, Levenshtein for signatures
-      install_requires=["haystack>0.39",
+      install_requires=["haystack>=0.41",
                         "numpy",
                         "networkx",
                         "python-Levenshtein"],

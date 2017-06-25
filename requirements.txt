@@ -1,11 +1,6 @@
-construct<2.8
-decorator
-future
--e git://github.com/trolldbois/python-haystack.git@development#egg=haystack
-# -e git://github.com/{ username }/{ reponame }.git@{ tag name }#egg={ desired egg name }
-haystack
+# -e git://github.com/trolldbois/python-haystack.git@development#egg=haystack
+haystack>=0.41
 networkx
 numpy
-pefile
 python-Levenshtein
 six==1.10.0

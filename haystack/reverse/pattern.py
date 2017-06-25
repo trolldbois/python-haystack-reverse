@@ -265,9 +265,13 @@ class PointerIntervalSignature:
         self.mmap = self.memory_handler._get_mapping(self.mmap_pathname)[0]
         return
 
+    def _get_cache_filename(self):
+        return config.get_cache_filename('pinned', self.name)
+
     def _load(self):
         # DO NOT SORT LIST. c'est des sequences. pas des sets.
-        myname = self.cacheFilenamePrefix + '.pinned'
+        #self.cacheFilenamePrefix + '.pinned'
+        myname = self._get_cache_filename()
         log.debug('Reading signature from %s',myname)
         sig = utils.int_array_cache(myname)
         if sig is None:
@@ -297,12 +301,13 @@ class PointerIntervalSignature:
 
     def _loadAddressCache(self):
         # DO NOT SORT LIST. c'est des sequences. pas des sets.
-        myname = self.cacheFilenamePrefix + '.pinned.vaddr'
+        # myname = self.cacheFilenamePrefix + '.pinned.vaddr'
+        myname = self._get_cache_filename() + '.vaddr'
+
         if os.access(myname, os.F_OK):
-            addressCache = pickle.load(open(myname, 'rb'))
-            log.debug(
-                "%d Signature addresses loaded from cache." %
-                (len(addressCache)))
+            with open(myname, 'rb') as fin:
+                addressCache = pickle.load(fin)
+            log.debug("%d Signature addresses loaded from cache." % (len(addressCache)))
             self.addressCache.update(addressCache)
         else:  # get at least 10 values
             for i in range(0, len(self), len(self) // 10):
@@ -311,7 +316,8 @@ class PointerIntervalSignature:
         return
 
     def _saveAddressCache(self):
-        myname = self.cacheFilenamePrefix + '.pinned.vaddr'
+        # myname = self.cacheFilenamePrefix + '.pinned.vaddr'
+        myname = self._get_cache_filename() + '.vaddr'
         pickle.dump(self.addressCache, open(myname, 'wb'))
 
     def getAddressForPreviousPointer(self, offset):
@@ -420,7 +426,7 @@ class PinnedPointers:
 
     def pinned(self, nb=None):
         if nb is None:
-            nb == len(self.sequence)
+            nb = len(self.sequence)
         return self.sequence[:nb]
 
     def __len__(self):
@@ -429,16 +435,21 @@ class PinnedPointers:
     def structLen(self):
         return self.nb_bytes
 
-    def __cmp__(self, o):
-        if len(self) != len(o):
-            return cmp(len(self), len(o))
-        # that means the sequence is different too
-        if self.structLen() != o.structLen():
-            return cmp(self.structLen(), o.structLen())
-        if self.sequence != o.sequence:  # the structLen can be the same..
-            return cmp(self.sequence, o.sequence)
-        # else offset is totally useless, we have a match
-        return 0
+    def __eq__(self, o):
+        return len(self) == len(o) and \
+            self.structLen() == o.structLen() and \
+           self.sequence == o.sequence
+
+    # def __cmp__(self, o):
+    #     if len(self) != len(o):
+    #         return cmp(len(self), len(o))
+    #     # that means the sequence is different too
+    #     if self.structLen() != o.structLen():
+    #         return cmp(self.structLen(), o.structLen())
+    #     if self.sequence != o.sequence:  # the structLen can be the same..
+    #         return cmp(self.sequence, o.sequence)
+    #     # else offset is totally useless, we have a match
+    #     return 0
 
     def __contains__(self, other):
         raise NotImplementedError

@@ -11,12 +11,12 @@ import numbers
 
 from haystack.reverse import fieldtypes
 from haystack.reverse import re_string
-from haystack.reverse import structure
 from haystack.reverse.heuristics import model
 
 log = logging.getLogger('dsa')
 
 # fieldtypes.Field analysis related functions and classes
+
 
 def _py3_byte_compat(c):
     if isinstance(c, numbers.Number):
@@ -25,6 +25,7 @@ def _py3_byte_compat(c):
     return c
 
 _w = _py3_byte_compat
+
 
 class ZeroFields(model.FieldAnalyser):
     """ checks for possible fields, aligned, with WORDSIZE zeros."""
@@ -275,7 +276,10 @@ class FieldReverser(model.AbstractReverser):
         fields, gaps = self._analyze(_record)
         # _record.add_fields(fields)
         # _record.add_fields(gaps)  # , fieldtypes.UNKNOWN
-        _record_type = structure.RecordType('struct_%x' % _record.address, len(_record), fields+gaps)
+        # FIXME why not use fieldstypes.STRUCT for type and a field definition ?
+        # is it really worth haveing a definitiion separate ?
+        # yes so we can copy the recordType to other anonnymousstruct
+        _record_type = fieldtypes.RecordType('struct_%x' % _record.address, len(_record), fields + gaps)
         _record.set_record_type(_record_type)
         _record.set_reverse_level(self._reverse_level)
         return _record
@@ -329,7 +333,7 @@ class FieldReverser(model.AbstractReverser):
                 assert False  # f.offset < nextoffset # No overlaps authorised
                 # fields.remove(f)
             # do next field
-            nextoffset = f.offset + len(f)
+            nextoffset = f.offset + f.size
         # conclude on QUEUE insertion
         lastfield_size = len(_record) - nextoffset
         if lastfield_size > 0:
@@ -371,6 +375,7 @@ class FieldReverser(model.AbstractReverser):
         return
 
 
+#@FieldTypeReverser meaningm that it does not work in FieldInstance, no value query.
 class TextFieldCorrection(model.AbstractReverser):
     """
     Second pass on records to fix text fields.
@@ -381,7 +386,7 @@ class TextFieldCorrection(model.AbstractReverser):
     REVERSE_LEVEL = 11
 
     def reverse_record(self, _context, _record):
-        fields = _record.get_fields()
+        fields = _record.record_type.get_fields()
         if False:
             # corrected in non-aligned FieldReverser
             # a) utf16 could be non aligned. We look for small_int+utf16. and aggregate.
@@ -402,7 +407,7 @@ class TextFieldCorrection(model.AbstractReverser):
         # c) if record has one null terminated str, Rename record type as cstring.
         # rename/retype parent pointers + comment.
         if len(fields) == 2 and fields[0].is_string() and fields[1].is_zeroes():
-            _record.set_name('string')
+            _record.record_type.type_name = 'string'
 
         return _record
 

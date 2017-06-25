@@ -14,6 +14,7 @@ import os
 
 from haystack import target
 from haystack.reverse import pattern
+from haystack.reverse import config
 from haystack.mappings.base import MemoryHandler, AMemoryMapping
 from haystack.mappings.file import LocalMemoryMapping
 
@@ -24,6 +25,7 @@ Testing pointer patterns recognition.
 '''
 
 log = logging.getLogger('test_pattern')
+
 
 class SignatureTests(unittest.TestCase):
     """
@@ -44,6 +46,9 @@ class SignatureTests(unittest.TestCase):
             os.mkdir('test/reverse/fakedump')
         except OSError as e:
             pass
+        # clean up PY2/Py3
+        config.remove_cache_folder('test/reverse/fakedump')
+        # print(config.get_cache_folder_name('test/reverse/fakedump'))
         try:
             os.mkdir('test/reverse/fakedump/cache')
         except OSError as e:

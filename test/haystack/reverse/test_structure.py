@@ -4,17 +4,16 @@
 """Tests for haystack.reverse.structure."""
 
 import logging
+import os
 import unittest
 
-import os
-
-from haystack.reverse import context
+from haystack import dump_loader
 from haystack.reverse import config
-from haystack.reverse import structure
+from haystack.reverse import context
 from haystack.reverse import fieldtypes
+from haystack.reverse import structure
 from haystack.reverse.heuristics import dsa
 from haystack.reverse.heuristics import pointertypes
-from haystack import dump_loader
 
 __author__ = "Loic Jaquemet"
 __copyright__ = "Copyright (C) 2012 Loic Jaquemet"
@@ -60,7 +59,7 @@ class TestStructure(unittest.TestCase):
     def test_decodeFields(self):
         for s in self.context.listStructures():
             self.dsa.reverse_record(self.context, s)
-            pointer_fields = [f for f in s.get_fields() if f.is_pointer()]
+            pointer_fields = [f for f in s.get_fields() if f.type.is_pointer()]
             if len(s) == 12:  # Node + padding, 1 pointer on create
                 self.assertEqual(len(s.get_fields()), 3)  # 1, 2 and padding
                 self.assertEqual(len(pointer_fields), 2)
@@ -86,7 +85,7 @@ class TestStructure(unittest.TestCase):
         for s in self.context.listStructures():
             log.debug('RLEVEL: %d' % s.get_reverse_level())
             self.pta.reverse_record(self.context, s)
-            pointer_fields = [f for f in s.get_fields() if f.is_pointer()]
+            pointer_fields = [f for f in s.get_fields() if f.type.is_pointer()]
             if len(s) == 12:  # Node + padding, 1 pointer on create
                 self.assertEqual(len(s.get_fields()), 3)  # 1, 2 and padding
                 self.assertEqual(len(pointer_fields), 2)
@@ -104,7 +103,7 @@ class TestStructure(unittest.TestCase):
                 elif name in ['_dirty', '_AnonymousRecord__address', '_AnonymousRecord__record_type']:
                     self.assertTrue(value)
                 elif name in ['_fields']:
-                    self.assertEqual(value, list())
+                    self.assertEqual(value, None)
                 elif name in ['dumpname']:
                     self.assertTrue(os.access(value, os.F_OK))
                 else:
@@ -156,11 +155,11 @@ class TestStructure2(unittest.TestCase):
         f1 = fieldtypes.Field('f1', 0*word_size, fieldtypes.ZEROES, word_size, False)
         f2 = fieldtypes.Field('f2', 1*word_size, fieldtypes.ZEROES, word_size, False)
         fields = [f1, f2]
-        _record_type = structure.RecordType('struct_test', 2*word_size, fields)
+        _record_type = fieldtypes.RecordType('struct_test', 2 * word_size, fields)
         _record.set_record_type(_record_type)
         # same fields
-        self.assertEqual(f1, _record.get_fields()[0])
-        self.assertEqual(f1, _record.get_field('f1'))
+        self.assertEqual(f1, _record.get_fields()[0].type)
+        self.assertEqual(f1, _record.get_field('f1').type)
         # get_fields return a new list of fields
         x = _record.get_fields()
         self.assertEqual(x, _record.get_fields())

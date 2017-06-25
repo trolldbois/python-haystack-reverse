@@ -1,9 +1,11 @@
 from __future__ import print_function
+
 import logging
 import unittest
 
 from haystack import dump_loader
 from haystack.reverse import api
+from haystack.reverse import config
 from test.testfiles import zeus_856_svchost_exe
 
 log = logging.getLogger("test_reverse_api")
@@ -13,6 +15,7 @@ class TestReverseApi(unittest.TestCase):
 
     def setUp(self):
         dumpname = zeus_856_svchost_exe.dumpname
+        # config.remove_cache_folder(dumpname)
         self.memory_handler = dump_loader.load(dumpname)
         process_context = self.memory_handler.get_reverse_context()
 

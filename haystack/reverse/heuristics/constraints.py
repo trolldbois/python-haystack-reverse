@@ -38,7 +38,7 @@ class ConstraintsReverser(object):
         for list_item_addr in members:
             _context = self.__process_context.get_context_for_address(list_item_addr)
             _item = _context.get_record_for_address(list_item_addr)
-            new_record = structure.AnonymousRecord(self.__memory_handler, _item.address, len(_item), prefix=None)
+            new_record = structure.AnonymousRecord(self.__memory_handler, _item.address, len(_item), name=None)
             new_record.set_record_type(_record_type, True)
             records.append(new_record)
         lines.append('# instances: [%s]' % (','.join(['0x%x' % addr for addr in members])))
