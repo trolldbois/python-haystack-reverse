@@ -305,7 +305,8 @@ class PointerIntervalSignature:
         myname = self._get_cache_filename() + '.vaddr'
 
         if os.access(myname, os.F_OK):
-            addressCache = pickle.load(open(myname, 'rb'))
+            with open(myname, 'rb') as fin:
+                addressCache = pickle.load(fin)
             log.debug("%d Signature addresses loaded from cache." % (len(addressCache)))
             self.addressCache.update(addressCache)
         else:  # get at least 10 values

@@ -105,6 +105,9 @@ class Nocopy:
         # print 'got',self.bytes[self.start:self.end]
 
     def __getitem__(self, i):
+        # Did py3 just catch a bug ?
+        if isinstance(i, slice):
+            return self.__getslice__(i.start, i.stop, i.step) # If start/stop/step None, thats a BUG
         if i >= 0:
             return self.bytes[self.start + i]
         else:
@@ -112,15 +115,20 @@ class Nocopy:
 
     # end defaults to int.max, not -1
     def __getslice__(self, start=0, end=-1, step=1):
-        if end > self.end - self.start:  # len(self)
+        if start is None: start = 0
+        if step is None: step = 1
+        if end is None or (end > self.end - self.start):  # len(self)
             end = self.end - self.start
         if step == 1:
             if start >= 0 and end >= 0:
                 return Nocopy(self.bytes, self.start + start, self.start + end)
             elif start < 0 and end < 0:
                 return Nocopy(self.bytes, self.end + start, self.end + end)
+            else:
+                return Nocopy(self.bytes, self.start + start, self.end + end)
         else:  # screw you
-            return self.bytes[start:end:step]
+            # FIXME BUG, hidden by step=1 in py2. self.bytes[start+offset::] maybe ?
+            return self.bytes[self.start+start:self.start+end:step]
 
     def __eq__(self, o):
         to = type(o)
@@ -352,7 +360,7 @@ def testEncoding(bytesarray, encoding):
     except Exception as e:
         log.error('Error using encoding %s' % encoding)
         raise e
-    i = ustr.find(b'\x00')
+    i = ustr.find('\x00'*sizemultiplier)
     if i == -1:
         log.debug('%s was ok - but no NULL' % encoding)
         end = len(ustr)

@@ -57,7 +57,8 @@ class SignatureTests(unittest.TestCase):
         self.seq = [8, 8, 16, 256, 8, 16, 8, 8, 24]
         self.target = target.TargetPlatform.make_target_platform_local()
         self.word_size = self.target.get_word_size()
-        # config.remove_cache_folder('test/reverse/fakedump')
+        # clean up PY2/Py3
+        ## config.remove_cache_folder('test/reverse/fakedump')
         # print(config.get_cache_folder_name('test/reverse/fakedump'))
 
     def _accumulate(self, iterable, func=operator.add):

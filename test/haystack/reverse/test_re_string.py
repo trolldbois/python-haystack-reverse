@@ -137,6 +137,10 @@ class TestReString(unittest.TestCase):
         self.assertEqual(s[2:-1], x[0:])
         self.assertEqual(s[2:-1], x)
 
+        # try more
+        val = x[2:6:2]
+        self.assertEqual(val, '57')
+
         self.assertEqual(re_string.Nocopy(s, 9, 10), s[9:10])
         self.assertEqual(re_string.Nocopy(s, 9, 10), '0')
         self.assertEqual(re_string.Nocopy(s, -2, -1), '9')

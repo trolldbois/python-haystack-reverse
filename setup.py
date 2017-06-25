@@ -41,7 +41,7 @@ class PyPrepTestsCommand(distutils.cmd.Command):
 
 
 setup(name="haystack-reverse",
-      version="0.40",
+      version="0.41",
       description="Reverse C Structures from a process' memory",
       long_description=open("README.rst").read(),
       url="http://packages.python.org/haystack-reverse/",

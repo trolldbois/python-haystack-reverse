@@ -5,7 +5,6 @@
 #
 
 import logging
-from Tkinter import _setit
 
 """
 the Python classes to represent the types of reversed structures.

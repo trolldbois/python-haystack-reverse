@@ -373,6 +373,7 @@ class AnonymousRecord(object):
 
     def to_string(self):
         # print self.fields
+        # FIXME ? why is it not always ordered ?
         self.get_fields().sort()
         field_string_lines = []
         for field in self.get_fields():
@@ -646,6 +647,11 @@ class FieldInstance(object):
         if not isinstance(other, FieldInstance):
             return False
         return self.type == other.type and self._parent == other._parent
+
+    def __lt__(self, other):
+        if not isinstance(other, FieldInstance):
+            return False
+        return self.type < other.type
 
 
 class RecordFieldInstance(FieldInstance, AnonymousRecord):
