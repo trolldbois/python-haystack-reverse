@@ -426,7 +426,7 @@ class PinnedPointers:
 
     def pinned(self, nb=None):
         if nb is None:
-            nb == len(self.sequence)
+            nb = len(self.sequence)
         return self.sequence[:nb]
 
     def __len__(self):
@@ -435,16 +435,21 @@ class PinnedPointers:
     def structLen(self):
         return self.nb_bytes
 
-    def __cmp__(self, o):
-        if len(self) != len(o):
-            return cmp(len(self), len(o))
-        # that means the sequence is different too
-        if self.structLen() != o.structLen():
-            return cmp(self.structLen(), o.structLen())
-        if self.sequence != o.sequence:  # the structLen can be the same..
-            return cmp(self.sequence, o.sequence)
-        # else offset is totally useless, we have a match
-        return 0
+    def __eq__(self, o):
+        return len(self) == len(o) and \
+            self.structLen() == o.structLen() and \
+           self.sequence == o.sequence
+
+    # def __cmp__(self, o):
+    #     if len(self) != len(o):
+    #         return cmp(len(self), len(o))
+    #     # that means the sequence is different too
+    #     if self.structLen() != o.structLen():
+    #         return cmp(self.structLen(), o.structLen())
+    #     if self.sequence != o.sequence:  # the structLen can be the same..
+    #         return cmp(self.sequence, o.sequence)
+    #     # else offset is totally useless, we have a match
+    #     return 0
 
     def __contains__(self, other):
         raise NotImplementedError
