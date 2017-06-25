@@ -307,6 +307,8 @@ class PointerField(Field):
     represent a pointer field.
     attributes such as ext_lib should be in this, because its a type information, most probably (fn pointer..)
     really, we should have a function_pointer subtype
+
+    But pointee address is definitely an instance topic.
     """
     def __init__(self, name, offset, size):
         super(PointerField, self).__init__(name, offset, POINTER, size, False)
@@ -337,6 +339,7 @@ class PointerField(Field):
         self.__pointer_to_ext_lib = True
 
     def set_pointee_addr(self, addr):
+        # TODO, move to FieldInstance subtype ?
         self._child_addr = addr
 
     def set_pointee_desc(self, desc):

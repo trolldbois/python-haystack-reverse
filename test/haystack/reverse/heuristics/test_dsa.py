@@ -257,8 +257,8 @@ class TestDSA(unittest.TestCase):
         log.debug(st.to_string())
         fields = st.get_fields()
         self.assertEqual(len([_ for _ in fields]), 2)
-        self.assertEqual(fields[1].field_type, fieldtypes.STRING16)
-        self.assertTrue(fields[1].is_string())
+        self.assertEqual(fields[1].type.field_type, fieldtypes.STRING16)
+        self.assertTrue(fields[1].type.is_string())
 
     def test_ascii_null_terminated_2(self):
         """ null terminated """
@@ -271,8 +271,8 @@ class TestDSA(unittest.TestCase):
         log.debug(st.to_string())
         fields = st.get_fields()
         self.assertEqual(len([_ for _ in fields]), 5)
-        self.assertEqual(fields[3].field_type, fieldtypes.STRINGNULL)
-        self.assertTrue(fields[3].is_string())
+        self.assertEqual(fields[3].type.field_type, fieldtypes.STRINGNULL)
+        self.assertTrue(fields[3].type.is_string())
 
     def test_utf_16_le_null_terminated_3(self):
         ''' null terminated '''
@@ -285,8 +285,8 @@ class TestDSA(unittest.TestCase):
         log.debug(st.to_string())
         fields = st.get_fields()
         self.assertEqual(len([_ for _ in fields]), 2)  # should be 3 Lt0?
-        self.assertEqual(fields[0].field_type, fieldtypes.STRING16)
-        self.assertTrue(fields[0].is_string())
+        self.assertEqual(fields[0].type.field_type, fieldtypes.STRING16)
+        self.assertTrue(fields[0].type.is_string())
 
     def test_big_block(self):
         ''' null terminated '''
@@ -301,7 +301,7 @@ class TestDSA(unittest.TestCase):
         self.assertLess(len([_ for _ in fields]), 879)
         #self.assertEqual( fields[35].field_type.name, fieldtypes.STRINGNULL)
         #self.assertTrue( fields[35].isString())
-        strfields = [f for f in st.get_fields() if f.is_string()]
+        strfields = [f for f in st.get_fields() if f.type.is_string()]
         # for f in strfields:
         #  print f.toString(),
         self.assertGreater(len(strfields), 30)
@@ -317,8 +317,8 @@ class TestDSA(unittest.TestCase):
         log.debug(st.to_string())
         fields = st.get_fields()
         self.assertEqual(len([_ for _ in fields]), 3)
-        self.assertEqual(fields[1].field_type, fieldtypes.STRING16)
-        self.assertTrue(fields[1].is_string())
+        self.assertEqual(fields[1].type.field_type, fieldtypes.STRING16)
+        self.assertTrue(fields[1].type.is_string())
 
         pass
 
@@ -335,7 +335,7 @@ class TestDSA(unittest.TestCase):
         self.assertLess(len([_ for _ in fields]), 890)
         #self.assertEqual( fields[35].field_type.name, fieldtypes.STRINGNULL)
         #self.assertTrue( fields[35].isString())
-        fields = [f for f in st.get_fields() if f.is_string()]
+        fields = [f for f in st.get_fields() if f.type.is_string()]
         # for f in fields:
         #  print f.toString(),
 
@@ -373,8 +373,8 @@ class TestFieldAnalyserReal(unittest.TestCase):
         nextoffset = 0
         # test is sorted
         for i, f in enumerate(self.test1.get_fields()):
-            self.assertGreaterEqual(f.offset, nextoffset)
-            nextoffset = f.offset + len(f)
+            self.assertGreaterEqual(f.type.offset, nextoffset)
+            nextoffset = f.type.offset + len(f.type)
 
 
 class TestTextFieldCorrection(unittest.TestCase):
@@ -399,9 +399,9 @@ class TestTextFieldCorrection(unittest.TestCase):
         rev.reverse_record(self.heap_context, _record)
         fields = _record.get_fields()
         self.assertEqual(len(fields), 3)
-        self.assertTrue(fields[0].is_string())
-        self.assertTrue(fields[1].is_string())
-        self.assertTrue(fields[2].is_zeroes())
+        self.assertTrue(fields[0].type.is_string())
+        self.assertTrue(fields[1].type.is_string())
+        self.assertTrue(fields[2].type.is_zeroes())
 
         print(_record.to_string())
 

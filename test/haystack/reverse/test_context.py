@@ -105,15 +105,15 @@ class TestProcessContext(unittest.TestCase):
         _record_type = fieldtypes.RecordType('struct_test', 2 * word_size, fields)
         _record.set_record_type(_record_type)
         # same fields
-        self.assertEqual(f1, _record.get_fields()[0].field_type)
-        self.assertEqual(f1, _record.get_field('f1').field_type)
+        self.assertEqual(f1, _record.get_fields()[0].type)
+        self.assertEqual(f1, _record.get_field('f1').type)
         # Check get_fields return a new list of fields
         x = _record.get_fields()
         self.assertEqual(x, _record.get_fields())
         x.pop(0)
         self.assertNotEqual(x, _record.get_fields())
 
-        process_context.add_reversed_type(_record_type, [1,2,3])
+        process_context.add_reversed_type(_record_type, [1, 2, 3])
 
         r_types = list(process_context.list_reversed_types())
         self.assertEqual(r_types[0].type_name, 'struct_test')

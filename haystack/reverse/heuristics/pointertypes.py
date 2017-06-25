@@ -40,10 +40,13 @@ class PointerFieldReverser(model.AbstractReverser):
         """
         # If you want to cache resolved infos, it still should be decided by
         # the caller
-        pointer_fields = [field for field in _record.get_fields() if field.is_pointer()]
+        pointer_fields = [field for field in _record.record_type.get_fields() if field.is_pointer()]
         log.debug('got %d pointer fields', len(pointer_fields))
         for field in pointer_fields:
-            value = field.value
+            #value = field.value
+            # get the FieldInstance, and its value.
+            # FIXME This is messed up, this set_pointee_addr method should be in FieldInstance
+            value = _record.get_field(field.name).value
             field.set_pointee_addr(value)  # default
             # FIXME field.set_resolved() # What ?
             # + if value is unaligned, mark it as cheesy
