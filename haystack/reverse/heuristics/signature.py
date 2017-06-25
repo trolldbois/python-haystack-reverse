@@ -51,7 +51,7 @@ class TypeReverser(model.AbstractReverser):
         for _record in _context.listStructures():
             self._signatures.append((len(_record), _record.address, _record.get_signature_text()))
             self._nb_reversed += 1
-            self._callback(1) ## FIXME
+            self._callback(total=1) ## FIXME total should not be 1.
         ##
         self._similarities = []
         for i, (size1, addr1, el1) in enumerate(self._signatures[:-1]):

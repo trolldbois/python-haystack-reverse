@@ -5,6 +5,7 @@
 #
 
 import logging
+from Tkinter import _setit
 
 """
 the Python classes to represent the types of reversed structures.
@@ -115,7 +116,7 @@ class RecordType(object):
                 raise ValueError("Offset 0x%x is not in structure?!" % offset)  # not possible
             # the last field standing is the one ( ordered fields)
             ret = ret[-1]
-            if offset < ret.field_type.offset + len(ret):
+            if offset < ret.offset + len(ret):
                 return ret
             # in between fields. Can happens on un-analyzed structure.
             # or byte field
@@ -132,9 +133,13 @@ class RecordType(object):
     def size(self):
         return len(self)
 
-    @property
-    def type_name(self):
+    def _get_type_name(self):
         return self.__type_name
+
+    def _set_type_name(self, name):
+        self.__type_name = name
+
+    type_name = property(_get_type_name, _set_type_name, None, "The type name")
 
     def __len__(self):
         return int(self.__size)
@@ -402,6 +407,7 @@ class ZeroField(ArrayField):
         comment = '''# %s zeroes: '\\x00'*%d''' % (self.comment, len(self))
         fstr = "( '%s' , %s ), %s\n" % (self.name, self.get_typename(), comment)
         return fstr
+
 
 class RecordField(Field, RecordType):
     """

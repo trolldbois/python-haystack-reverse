@@ -52,22 +52,22 @@ class TestField(SrcTests):
     def test_zeroes(self):
         z1 = fieldtypes.ZeroField('one', 0, 1)
         self.assertEqual(len(z1), 1)
-        self.assertIn('ctypes.c_ubyte*1 )', z1.to_string('\x00\x00\x00\x00'))
+        self.assertIn('ctypes.c_ubyte*1 )', z1.to_string())
 
         z2 = fieldtypes.ZeroField('two', 0, 2)
         self.assertEqual(len(z2), 2)
-        self.assertIn('ctypes.c_ubyte*2 )', z2.to_string('\x00\x00\x00\x00'))
+        self.assertIn('ctypes.c_ubyte*2 )', z2.to_string())
 
     def test_gaps(self):
         g1 = fieldtypes.Field('gap_0', 0, fieldtypes.UNKNOWN, 1, False)
         self.assertEqual(len(g1), 1)
         self.assertTrue(g1.is_gap())
-        print(g1.to_string('\x00\x00\x00\x00'))
-        self.assertIn('ctypes.c_ubyte*1 )', g1.to_string('\x00\x00\x00\x00'))
+        print(g1.to_string())
+        self.assertIn('ctypes.c_ubyte*1 )', g1.to_string())
 
         g2 = fieldtypes.Field('gap_0', 0, fieldtypes.UNKNOWN, 2, False)
         self.assertEqual(len(g2), 2)
-        self.assertIn('ctypes.c_ubyte*2 )', g2.to_string('\x00\x00\x00\x00'))
+        self.assertIn('ctypes.c_ubyte*2 )', g2.to_string())
 
     def test_is_types(self):
         # def __init__(self, astruct, offset, typename, size, isPadding):
@@ -89,8 +89,8 @@ class TestField(SrcTests):
         _record_type = fieldtypes.RecordType('struct_text', 2 * word_size, fields)
         _record.set_record_type(_record_type)
 
-        self.assertEqual(f1, _record.get_fields()[0])
-        self.assertEqual(f1, _record.get_field('f1'))
+        self.assertEqual(f1, _record.get_fields()[0].type)
+        self.assertEqual(f1, _record.get_field('f1').type)
 
     def test_subtype(self):
         start = self.offsets['start_list'][0]
@@ -114,13 +114,13 @@ class TestField(SrcTests):
         _record.set_record_type(_record_type)
         self.assertEqual(len(_record), 40)
         f1, f2, f3 = _record.get_fields()
-        self.assertEqual(len(f1), word_size)
-        self.assertEqual(len(f2), word_size*2)
-        self.assertEqual(len(f3), word_size)
+        self.assertEqual(len(f1.type), word_size)
+        self.assertEqual(len(f2.type), word_size*2)
+        self.assertEqual(len(f3.type), word_size)
 
         self.assertEqual(f2.name, 'list')
-        self.assertEqual(f2.field_type, fieldtypes.STRUCT)
-        self.assertEqual(f2.type_name, 'LIST_ENTRY')
+        self.assertEqual(f2.type.field_type, fieldtypes.STRUCT)
+        self.assertEqual(f2.type.type_name, 'LIST_ENTRY')
 
         print(_record.to_string())
 

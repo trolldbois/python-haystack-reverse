@@ -17,6 +17,7 @@ log = logging.getLogger('dsa')
 
 # fieldtypes.Field analysis related functions and classes
 
+
 def _py3_byte_compat(c):
     if isinstance(c, numbers.Number):
         assert(0 <= c < 256)
@@ -24,6 +25,7 @@ def _py3_byte_compat(c):
     return c
 
 _w = _py3_byte_compat
+
 
 class ZeroFields(model.FieldAnalyser):
     """ checks for possible fields, aligned, with WORDSIZE zeros."""
@@ -373,6 +375,7 @@ class FieldReverser(model.AbstractReverser):
         return
 
 
+#@FieldTypeReverser meaningm that it does not work in FieldInstance, no value query.
 class TextFieldCorrection(model.AbstractReverser):
     """
     Second pass on records to fix text fields.
@@ -383,7 +386,7 @@ class TextFieldCorrection(model.AbstractReverser):
     REVERSE_LEVEL = 11
 
     def reverse_record(self, _context, _record):
-        fields = _record.get_fields()
+        fields = _record.record_type.get_fields()
         if False:
             # corrected in non-aligned FieldReverser
             # a) utf16 could be non aligned. We look for small_int+utf16. and aggregate.
@@ -404,7 +407,7 @@ class TextFieldCorrection(model.AbstractReverser):
         # c) if record has one null terminated str, Rename record type as cstring.
         # rename/retype parent pointers + comment.
         if len(fields) == 2 and fields[0].is_string() and fields[1].is_zeroes():
-            _record.name = 'string'
+            _record.record_type.type_name = 'string'
 
         return _record
 

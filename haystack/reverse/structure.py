@@ -184,13 +184,13 @@ class AnonymousRecord(object):
     Comparison between struct is done is relative address space.
     """
 
-    def __init__(self, memory_handler, _address, size, prefix=None):
+    def __init__(self, memory_handler, _address, size, name=None, record_type=None):
         """
         Create a record instance representing an allocated chunk to reverse.
         :param memory_handler: the memory_handler of the allocated chunk
         :param _address: the address of the allocated chunk
         :param size: the size of the allocated chunk
-        :param prefix: the name prefix to identify the allocated chunk
+        :param name: the name prefix to identify the allocated chunk
         :return:
         """
         self._memory_handler = memory_handler
@@ -199,9 +199,6 @@ class AnonymousRecord(object):
         if size <= 0:
             raise ValueError("a record should have a positive size")
         self._size = size
-        self._reverse_level = 0
-        # FIXME why not use fieldstypes.STRUCT ?
-        self.__record_type = fieldtypes.RecordType('struct_%x' % self.__address, self._size, [])
         self._resolved = False
         self._resolvedPointers = False
         self._reverse_level = 0
@@ -210,7 +207,11 @@ class AnonymousRecord(object):
         self._bytes = None
         self.__final = False
         self._fields = None
-        self.name = prefix
+        if record_type:
+            self.set_record_type(record_type)
+        else:
+            self.set_record_type(fieldtypes.RecordType('struct_%x' % self.__address, self._size, []))
+        self.__set_name(name)
         return
 
     def __get_name(self):
@@ -273,7 +274,7 @@ class AnonymousRecord(object):
 
     def get_fields(self):
         """
-        Return the reversed fields for this record
+        Return the list of FieldInstance for this record
 
         :return: list(Field)
         """
@@ -283,29 +284,23 @@ class AnonymousRecord(object):
         if self._fields is not None:
             return list(self._fields)
         _fields = []
-        for f in self.__record_type.get_fields():
+        for f in self.record_type.get_fields():
             if f.is_record():
-                # that is a RecordField
-                _fields.append(RecordFieldInstance(self, f))
-                #record = AnonymousRecord(self.get_memory_handler(), self.address, len(self))
-                #record.set_record_type(f)
-                #_fields.append(record)
+                _fields.append(RecordFieldInstance(f, self))
             else:
                 _fields.append(FieldInstance(f, self))
-        # save it, do not save instantiated record type
         self._fields = _fields
         return list(self._fields)
 
     def get_field(self, name):
         """
-        Return the field named id
+        Return the FieldInstance named "name"
         :param name:
-        :return:
+        :return: FieldInstance
         """
         for f in self.get_fields():
             if f.name == name:
                 return f
-        # FIXME Field type mro() priority
         raise ValueError('No such field named %s'% name)
 
     def get_field_at_offset(self, offset):
@@ -313,10 +308,11 @@ class AnonymousRecord(object):
         returns the field at a specific offset in this structure
         """
         _fields = self.get_fields()
+        # mmmh... ok let's not have a copy of the implementation.
         f_decl = self.record_type.get_field_at_offset(offset)
         ret = [_f for _f in _fields if _f.type.offset == f_decl.offset]
         if len(ret) != 1:
-            raise RuntimeError('There should not be multiple fields at the same offset')
+            raise RuntimeError('While finding instance field at offset found in record type')
         return ret[0]
 
     def saveme(self, _context):
@@ -554,6 +550,8 @@ class %s(ctypes.Structure):  # %s
         return ctypes_def
 
 
+# FIXME  maybe instances field and record should have no name.
+# __str__ should combinae type.name with @address
 class FieldInstance(object):
     """
     The instance of a Field
@@ -650,38 +648,17 @@ class FieldInstance(object):
         return self.type == other.type and self._parent == other._parent
 
 
-# FIXME maybe dont do multiple inheritance
-# wait we need to be a field, but we want a anonymous record signature too ?
-# FIXME should be anomrecord, FieldInstance
-class RecordFieldInstance(AnonymousRecord, fieldtypes.RecordField):
-    """
-    make a record field
-    """
-    def __init__(self, parent, record_field):
-        size = sum([len(f) for f in record_field.get_fields()])
+class RecordFieldInstance(FieldInstance, AnonymousRecord):
+    def __init__(self, record_field, parent):
         _address = parent.address + record_field.offset
         #
-        AnonymousRecord.__init__(self, parent.get_memory_handler(), _address, size, record_field.get_typename())
-        self.__reverse_level = parent.get_reverse_level()
+        AnonymousRecord.__init__(self, parent.get_memory_handler(), _address, record_field.size, record_field.get_typename())
+        self.set_reverse_level(parent.get_reverse_level())
+        self.set_record_type(record_field)
         #
-        fieldtypes.RecordField.__init__(self, record_field.name, record_field.offset, record_field.get_typename(), record_field.get_fields())
-        assert self.field_type == fieldtypes.STRUCT
-        # FIXME why not use fieldstypes.STRUCT ?
-        # FIXME why not use fieldstypes.STRUCT for type and a field definition ?
-        # is it really worth haveing a definitiion separate ?
-        # yes so we can copy the recordType to other anonnymousstruct
-        _record_type = fieldtypes.RecordType(record_field.get_typename(), size, record_field.get_fields())
-        #_record_type = record_field
-        # recursively sets the record
-        self.set_record_type(_record_type)
+        FieldInstance.__init__(self, record_field, parent)
         return
 
-    def get_typename(self):
-        return '%s' % self.field_type
-
-    def get_signature(self):
-        return self.record_type, self.size
-
-    def get_type_signature(self):
-        return self.record_type.signature
-
+    @property
+    def name(self):
+        return self._field_decl.name

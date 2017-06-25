@@ -156,7 +156,7 @@ class TestDoubleLinkedReverser(SrcTests):
         self.assertEqual(end.get_fields()[1], end.get_field('list'))
 
         # but also types should be the same across list members
-        self.assertEqual(start.get_fields()[1], end.get_field('list'))
+        self.assertEqual(start.get_fields()[1].type, end.get_field('list').type)
         self.assertEqual(start.record_type, end.record_type)
         self.assertEqual(mid.record_type, end.record_type)
         # and get_fields produce different list of the same fields
@@ -173,7 +173,7 @@ class TestDoubleLinkedReverser(SrcTests):
             self.assertEqual(len(next_item), size)
             self.assertEqual(start.record_type, next_item.record_type)
             self.assertEqual(next_item.get_fields()[1], next_item.get_field('list'))
-            self.assertTrue(next_item.get_field('list').is_record())
+            self.assertTrue(next_item.get_field('list').type.is_record())
             # anyway, start->list has 2 members
             # FIXME this is returning next_item.list->Next !?
             item_list_entry = next_item.get_field('list')
@@ -427,7 +427,7 @@ class TestFullReverse(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.dumpname = 'test/dumps/ssh/ssh.1'
-        #config.remove_cache_folder(cls.dumpname)
+        config.remove_cache_folder(cls.dumpname)
         cls.memory_handler = dump_loader.load(ssh_1_i386_linux.dumpname)
         return
 
