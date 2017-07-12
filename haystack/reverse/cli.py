@@ -19,32 +19,6 @@ REVERSE_PARENT_DESC = 'List the predecessors pointing to the record at this addr
 REVERSE_HEX_DESC = 'Show the Hex values for the record at that address.'
 
 
-def reverse_argparser(reverse_parser):
-    reverse_parser.set_defaults(func=reverse_cmdline)
-    return reverse_parser
-
-
-def reverse_show_argparser(show_parser):
-    """ Show function options argument parser """
-    show_parser.add_argument('address', type=argparse_utils.int16, help='Record memory address in hex')
-    show_parser.set_defaults(func=reverse_show_cmdline)
-    return show_parser
-
-
-def reverse_parents_argparser(parents_parser):
-    parents_parser.add_argument('address', type=argparse_utils.int16, action='store', default=None,
-                        help='Hex address of the child structure')
-    parents_parser.set_defaults(func=show_predecessors_cmdline)
-    return parents_parser
-
-
-def reverse_hex_argparser(hex_parser):
-    hex_parser.add_argument('address', type=argparse_utils.int16, action='store', default=None,
-                            help='Specify the address of the record, or encompassed by the record')
-    hex_parser.set_defaults(func=show_hex)
-    return hex_parser
-
-
 def show_hex(args):
     """ Show the Hex values for the record at that address. """
     memory_handler = cli.get_memory_handler(args)
@@ -109,7 +83,7 @@ def reverse():
     argv = sys.argv[1:]
     desc = REVERSE_DESC
     rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    reverse_argparser(rootparser)
+    rootparser.set_defaults(func=reverse_cmdline)
     opts = rootparser.parse_args(argv)
     # apply verbosity
     cli.set_logging_level(opts)
@@ -122,7 +96,8 @@ def reverse_show():
     argv = sys.argv[1:]
     desc = REVERSE_SHOW_DESC
     rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    reverse_show_argparser(rootparser)
+    rootparser.add_argument('address', type=argparse_utils.int16, help='Record memory address in hex')
+    rootparser.set_defaults(func=reverse_show_cmdline)
     opts = rootparser.parse_args(argv)
     # apply verbosity
     cli.set_logging_level(opts)
@@ -135,7 +110,9 @@ def reverse_parents():
     argv = sys.argv[1:]
     desc = REVERSE_PARENT_DESC
     rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    reverse_parents_argparser(rootparser)
+    rootparser.add_argument('address', type=argparse_utils.int16, action='store', default=None,
+                        help='Hex address of the child structure')
+    rootparser.set_defaults(func=show_predecessors_cmdline)
     opts = rootparser.parse_args(argv)
     # apply verbosity
     cli.set_logging_level(opts)
@@ -148,7 +125,9 @@ def reverse_hex():
     argv = sys.argv[1:]
     desc = REVERSE_HEX_DESC
     rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    reverse_hex_argparser(rootparser)
+    rootparser.add_argument('address', type=argparse_utils.int16, action='store', default=None,
+                            help='Specify the address of the record, or encompassed by the record')
+    rootparser.set_defaults(func=show_hex)
     opts = rootparser.parse_args(argv)
     # apply verbosity
     cli.set_logging_level(opts)
