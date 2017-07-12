@@ -65,6 +65,7 @@ setup(name="haystack-reverse",
       ],
       package_data={"haystack.reverse.heuristics": ['data/words.100'],},
       entry_points={
+          # TODO : transform scripts into haystack-reverse subparsers + entry points
           'console_scripts': [
               'haystack-reverse = haystack.reverse.cli:reverse',
               'haystack-reverse-show = haystack.reverse.cli:reverse_show',
