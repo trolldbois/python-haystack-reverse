@@ -105,14 +105,12 @@ def reverse_cmdline(args):
     return
 
 
-def main_reverse():
+def reverse():
     argv = sys.argv[1:]
-    desc = REVERSE_DESC + cli.DUMPTYPE_BASE_DESC
+    desc = REVERSE_DESC
     rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    rootparser.add_argument('dump_folder_name', type=argparse_utils.readable, help='Use this memory dump folder')
     reverse_argparser(rootparser)
     opts = rootparser.parse_args(argv)
-    opts.dumptype = cli.DUMPTYPE_BASE
     # apply verbosity
     cli.set_logging_level(opts)
     # execute function
@@ -120,29 +118,12 @@ def main_reverse():
     return
 
 
-def minidump_reverse():
+def reverse_show():
     argv = sys.argv[1:]
-    desc = REVERSE_DESC + cli.DUMPTYPE_MINIDUMP_DESC
+    desc = REVERSE_SHOW_DESC
     rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    rootparser.add_argument('dump_filename', type=argparse_utils.readable, help='Use this memory dump file')
-    reverse_argparser(rootparser)
-    opts = rootparser.parse_args(argv)
-    opts.dumptype = cli.DUMPTYPE_MINIDUMP
-    # apply verbosity
-    cli.set_logging_level(opts)
-    # execute function
-    opts.func(opts)
-    return
-
-
-def main_reverse_show():
-    argv = sys.argv[1:]
-    desc = REVERSE_SHOW_DESC + cli.DUMPTYPE_BASE_DESC
-    rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    rootparser.add_argument('dump_folder_name', type=argparse_utils.readable, help='Use this memory dump folder')
     reverse_show_argparser(rootparser)
     opts = rootparser.parse_args(argv)
-    opts.dumptype = cli.DUMPTYPE_BASE
     # apply verbosity
     cli.set_logging_level(opts)
     # execute function
@@ -150,29 +131,12 @@ def main_reverse_show():
     return
 
 
-def minidump_reverse_show():
+def reverse_parents():
     argv = sys.argv[1:]
-    desc = REVERSE_SHOW_DESC + cli.DUMPTYPE_MINIDUMP_DESC
+    desc = REVERSE_PARENT_DESC
     rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    rootparser.add_argument('dump_filename', type=argparse_utils.readable, help='Use this memory dump file')
-    reverse_show_argparser(rootparser)
-    opts = rootparser.parse_args(argv)
-    opts.dumptype = cli.DUMPTYPE_MINIDUMP
-    # apply verbosity
-    cli.set_logging_level(opts)
-    # execute function
-    opts.func(opts)
-    return
-
-
-def main_reverse_parents():
-    argv = sys.argv[1:]
-    desc = REVERSE_PARENT_DESC + cli.DUMPTYPE_BASE_DESC
-    rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    rootparser.add_argument('dump_folder_name', type=argparse_utils.readable, help='Use this memory dump folder')
     reverse_parents_argparser(rootparser)
     opts = rootparser.parse_args(argv)
-    opts.dumptype = cli.DUMPTYPE_BASE
     # apply verbosity
     cli.set_logging_level(opts)
     # execute function
@@ -180,44 +144,12 @@ def main_reverse_parents():
     return
 
 
-def minidump_reverse_parents():
+def reverse_hex():
     argv = sys.argv[1:]
-    desc = REVERSE_PARENT_DESC + cli.DUMPTYPE_MINIDUMP_DESC
+    desc = REVERSE_HEX_DESC
     rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    rootparser.add_argument('dump_filename', type=argparse_utils.readable, help='Use this memory dump file')
-    reverse_parents_argparser(rootparser)
-    opts = rootparser.parse_args(argv)
-    opts.dumptype = cli.DUMPTYPE_MINIDUMP
-    # apply verbosity
-    cli.set_logging_level(opts)
-    # execute function
-    opts.func(opts)
-    return
-
-
-def main_reverse_hex():
-    argv = sys.argv[1:]
-    desc = REVERSE_HEX_DESC + cli.DUMPTYPE_BASE_DESC
-    rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    rootparser.add_argument('dump_folder_name', type=argparse_utils.readable, help='Use this memory dump folder')
     reverse_hex_argparser(rootparser)
     opts = rootparser.parse_args(argv)
-    opts.dumptype = cli.DUMPTYPE_BASE
-    # apply verbosity
-    cli.set_logging_level(opts)
-    # execute function
-    opts.func(opts)
-    return
-
-
-def minidump_reverse_hex():
-    argv = sys.argv[1:]
-    desc = REVERSE_HEX_DESC + cli.DUMPTYPE_MINIDUMP_DESC
-    rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
-    rootparser.add_argument('dump_filename', type=argparse_utils.readable, help='Use this memory dump file')
-    reverse_hex_argparser(rootparser)
-    opts = rootparser.parse_args(argv)
-    opts.dumptype = cli.DUMPTYPE_MINIDUMP
     # apply verbosity
     cli.set_logging_level(opts)
     # execute function

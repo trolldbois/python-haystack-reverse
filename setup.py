@@ -41,7 +41,7 @@ class PyPrepTestsCommand(distutils.cmd.Command):
 
 
 setup(name="haystack-reverse",
-      version="0.41",
+      version="0.42",
       description="Reverse C Structures from a process' memory",
       long_description=open("README.rst").read(),
       url="http://packages.python.org/haystack-reverse/",
@@ -66,14 +66,10 @@ setup(name="haystack-reverse",
       package_data={"haystack.reverse.heuristics": ['data/words.100'],},
       entry_points={
           'console_scripts': [
-              'haystack-reverse = haystack.reverse.cli:main_reverse',
-              'haystack-minidump-reverse = haystack.reverse.cli:minidump_reverse',
-              'haystack-reverse-show = haystack.reverse.cli:main_reverse_show',
-              'haystack-reverse-parents = haystack.reverse.cli:main_reverse_parents',
-              'haystack-reverse-hex = haystack.reverse.cli:main_reverse_hex',
-              'haystack-minidump-reverse-show = haystack.reverse.cli:minidump_reverse_show',
-              'haystack-minidump-reverse-parents = haystack.reverse.cli:minidump_reverse_parents',
-              'haystack-minidump-reverse-hex = haystack.reverse.cli:minidump_reverse_hex',
+              'haystack-reverse = haystack.reverse.cli:reverse',
+              'haystack-reverse-show = haystack.reverse.cli:reverse_show',
+              'haystack-reverse-parents = haystack.reverse.cli:reverse_parents',
+              'haystack-reverse-hex = haystack.reverse.cli:reverse_hex',
           ]
       },
       # reverse: numpy is a dependency for reverse.
@@ -81,7 +77,7 @@ setup(name="haystack-reverse",
       # numpy is already installed in travis-ci
       # setup_requires=["numpy"],
       # reverse: install requires networkx, numpy, Levenshtein for signatures
-      install_requires=["haystack>=0.41",
+      install_requires=["haystack>=0.42",
                         "numpy",
                         "networkx",
                         "python-Levenshtein"],
