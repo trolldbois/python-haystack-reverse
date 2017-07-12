@@ -9,7 +9,7 @@ import numpy
 
 from haystack.reverse import utils
 from haystack.reverse import context
-from haystack import dump_loader
+from haystack.mappings import folder
 
 
 class TestBasicFunctions(unittest.TestCase):
@@ -24,7 +24,7 @@ class TestBasicFunctions(unittest.TestCase):
         with self.assertRaises(ValueError):
             utils.closestFloorValue(-1, lst)
 
-        memory_handler = dump_loader.load('test/src/test-ctypes3.32.dump')
+        memory_handler = folder.load('test/src/test-ctypes3.32.dump')
         finder = memory_handler.get_heap_finder()
         walker = finder.list_heap_walkers()[0]
         heap_addr = walker.get_heap_address()

@@ -10,7 +10,7 @@ import logging
 import unittest
 import sys
 
-from haystack import dump_loader
+from haystack.mappings import folder
 from haystack import constraints
 from haystack.reverse import config
 from haystack.reverse import context
@@ -32,7 +32,7 @@ class TestKnownRecordTypeReverser(SrcTests):
 
     def setUp(self):
         dumpname = 'test/src/test-ctypes6.64.dump'
-        self.memory_handler = dump_loader.load(dumpname)
+        self.memory_handler = folder.load(dumpname)
         process_context = self.memory_handler.get_reverse_context()
         process_context.create_record_cache_folder()
         # load TU values
@@ -73,7 +73,7 @@ class TestDoubleLinkedReverser(SrcTests):
         dumpname = 'test/src/test-ctypes6.64.dump'
         # arh ... py2/py3 pickled cache
         config.remove_cache_folder(dumpname)
-        self.memory_handler = dump_loader.load(dumpname)
+        self.memory_handler = folder.load(dumpname)
         process_context = self.memory_handler.get_reverse_context()
         process_context.create_record_cache_folder()
         # load TU values
@@ -369,7 +369,7 @@ class TestStructureSizes(SrcTests):
 
     def setUp(self):
         # os.chdir()
-        self.memory_handler = dump_loader.load('test/src/test-ctypes3.32.dump')
+        self.memory_handler = folder.load('test/src/test-ctypes3.32.dump')
         self._load_offsets_values(self.memory_handler.get_name())
         finder = self.memory_handler.get_heap_finder()
         walkers = finder.list_heap_walkers()
@@ -428,7 +428,7 @@ class TestFullReverse(unittest.TestCase):
     def setUpClass(cls):
         cls.dumpname = 'test/dumps/ssh/ssh.1'
         config.remove_cache_folder(cls.dumpname)
-        cls.memory_handler = dump_loader.load(ssh_1_i386_linux.dumpname)
+        cls.memory_handler = folder.load(ssh_1_i386_linux.dumpname)
         return
 
     @classmethod
@@ -465,7 +465,7 @@ class TestReverseZeus(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.dumpname = zeus_856_svchost_exe.dumpname
-        cls.memory_handler = dump_loader.load(zeus_856_svchost_exe.dumpname)
+        cls.memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
         cls.process_context = cls.memory_handler.get_reverse_context()
         cls.process_context.create_record_cache_folder()
         ##
@@ -554,7 +554,7 @@ class TestReverseZeus(unittest.TestCase):
 class TestReversers(SrcTests):
 
     def setUp(self):
-        self.memory_handler = dump_loader.load('test/src/test-ctypes5.64.dump')
+        self.memory_handler = folder.load('test/src/test-ctypes5.64.dump')
         self._load_offsets_values(self.memory_handler.get_name())
         sys.path.append('test/src/')
 
@@ -652,7 +652,7 @@ class TestGraphReverser(SrcTests):
     def setUpClass(cls):
         cls.dumpname = zeus_856_svchost_exe.dumpname
         #config.remove_cache_folder(cls.dumpname)
-        cls.memory_handler = dump_loader.load(zeus_856_svchost_exe.dumpname)
+        cls.memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
         ##
         cls.offset = zeus_856_svchost_exe.known_records[0][0]
         cls._context = context.get_context_for_address(cls.memory_handler, cls.offset)
@@ -680,7 +680,7 @@ class TestGraphReverser(SrcTests):
 class TestEnrichedPointerAnalyserReal(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.memory_handler = dump_loader.load(zeus_856_svchost_exe.dumpname)
+        cls.memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
         cls._context = context.get_context_for_address(cls.memory_handler, 0x90000)
 
     @classmethod
@@ -736,7 +736,7 @@ class TestEnrichedPointerAnalyserReal(unittest.TestCase):
 class TestTypeReverser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.memory_handler = dump_loader.load(zeus_856_svchost_exe.dumpname)
+        cls.memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
         cls._context = context.get_context_for_address(cls.memory_handler, 0x90000)
 
     @classmethod

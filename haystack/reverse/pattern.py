@@ -19,7 +19,7 @@ import numbers
 import os
 from future.builtins import range
 
-from haystack import dump_loader
+from haystack.mappings import folder
 from haystack.reverse import config
 from haystack.reverse import utils
 from haystack.reverse import matchers
@@ -208,7 +208,7 @@ class PatternEncoder:
 def make(opts):
     log.info('Make the signature.')
     # head + first word size
-    memory_handler = dump_loader.load(opts.dumpfiles[0])
+    memory_handler = folder.load(opts.dumpfiles[0])
     word_size = memory_handler.get_target_platform().get_word_size()
     ppMapper = PinnedPointersMapper(word_size)
     heap_sig = PointerIntervalSignature(memory_handler, '[heap]')
@@ -216,7 +216,7 @@ def make(opts):
     ppMapper.addSignature(heap_sig)
     # now do the others
     for dumpfile in opts.dumpfiles[1:]:
-        memory_handler = dump_loader.load(dumpfile)
+        memory_handler = folder.load(dumpfile)
         if memory_handler.get_target_platform().get_word_size() != word_size:
             log.error("Differing wordsize between samples")
         heap_sig = PointerIntervalSignature(memory_handler, '[heap]')

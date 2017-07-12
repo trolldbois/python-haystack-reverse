@@ -16,9 +16,8 @@ import sys
 
 import matplotlib.pyplot as plt
 from haystack import argparse_utils
-from haystack import dump_loader
+from haystack.mappings import folder
 from haystack.reverse import config
-from haystack.reverse import context
 from haystack.reverse import utils
 
 """
@@ -80,7 +79,7 @@ def make(opts):
     # if __name__ == '__main__':
     # if False:
     #ctx = context.get_context('../../outputs/skype.1.a')
-    memory_handler = dump_loader.load(opts.dumpname)
+    memory_handler = folder.load(opts.dumpname)
 
     #digraph=networkx.readwrite.gexf.read_gexf(  '../../outputs/skype.1.a.gexf')
     digraph = networkx.readwrite.gexf.read_gexf(opts.gexf.name)

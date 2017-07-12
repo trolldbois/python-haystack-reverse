@@ -6,6 +6,7 @@
 import unittest
 import logging
 
+from haystack.mappings import folder
 from haystack.reverse.heuristics import radare
 from test.testfiles import zeus_856_svchost_exe
 
@@ -14,8 +15,7 @@ from test.testfiles import zeus_856_svchost_exe
 class TestRadare(unittest.TestCase):
 
     def setUp(self):
-        from haystack import dump_loader
-        self.memory_handler = dump_loader.load(zeus_856_svchost_exe.dumpname)
+        self.memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
         pass
 
     def tearDown(self):

@@ -17,8 +17,8 @@ import sys
 import os
 
 from haystack import argparse_utils
-from haystack import dump_loader
-import reversers
+from haystack.mappings import folder
+from haystack.reverse.heuristics import reversers
 from haystack.reverse import context
 from haystack.reverse import config
 from haystack.reverse import structure
@@ -55,7 +55,7 @@ def make(opts):
     finder = ctx.get_memory_handler().get_heap_finder()
     heap1 = finder.list_heap_walkers()[0]
     log.info('[+] Loading _memory_handler of %s' % opts.dump2)
-    newmappings = dump_loader.load(opts.dump2)
+    newmappings = folder.load(opts.dump2)
     finder2 = newmappings.get_heap_finder()
     heap2 = finder2.list_heap_walkers()[0]
     log.info('[+] finding diff values with %s' % opts.dump2)

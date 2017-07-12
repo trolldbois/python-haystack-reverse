@@ -7,7 +7,7 @@ import logging
 import os
 import unittest
 
-from haystack import dump_loader
+from haystack.mappings import folder
 from haystack.reverse import config
 from haystack.reverse import context
 from haystack.reverse import fieldtypes
@@ -31,7 +31,7 @@ class TestStructure(unittest.TestCase):
     def setUpClass(cls):
         cls.dumpname = 'test/src/test-ctypes3.32.dump'
         config.remove_cache_folder(cls.dumpname)
-        cls.memory_handler = dump_loader.load(cls.dumpname)
+        cls.memory_handler = folder.load(cls.dumpname)
         finder = cls.memory_handler.get_heap_finder()
         heap_walker = finder.list_heap_walkers()[0]
         heap_addr = heap_walker.get_heap_address()
@@ -116,7 +116,7 @@ class TestStructure2(unittest.TestCase):
     def setUpClass(cls):
         cls.dumpname = 'test/src/test-ctypes6.32.dump'
         config.remove_cache_folder(cls.dumpname)
-        cls.memory_handler = dump_loader.load(cls.dumpname)
+        cls.memory_handler = folder.load(cls.dumpname)
         finder = cls.memory_handler.get_heap_finder()
         heap_walker = finder.list_heap_walkers()[0]
         heap_addr = heap_walker.get_heap_address()

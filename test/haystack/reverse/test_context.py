@@ -6,7 +6,7 @@
 import logging
 import unittest
 
-from haystack import dump_loader
+from haystack.mappings import folder
 from haystack.reverse import config
 from haystack.reverse import context
 from haystack.reverse import fieldtypes
@@ -20,7 +20,7 @@ class TestMappingsLinux(SrcTests):
 
     @classmethod
     def setUpClass(cls):
-        cls.memory_handler = dump_loader.load('test/dumps/ssh/ssh.1')
+        cls.memory_handler = folder.load('test/dumps/ssh/ssh.1')
 
     @classmethod
     def tearDownClass(cls):
@@ -43,7 +43,7 @@ class TestMappingsWindows(SrcTests):
 
     @classmethod
     def setUpClass(cls):
-        cls.memory_handler = dump_loader.load('test/dumps/putty/putty.1.dump')
+        cls.memory_handler = folder.load('test/dumps/putty/putty.1.dump')
         cls.my_target = cls.memory_handler.get_target_platform()
         cls.my_ctypes = cls.my_target.get_target_ctypes()
         cls.my_utils = cls.my_target.get_target_ctypes_utils()
@@ -79,7 +79,7 @@ class TestProcessContext(unittest.TestCase):
     def setUpClass(cls):
         cls.dumpname = 'test/src/test-ctypes6.32.dump'
         config.remove_cache_folder(cls.dumpname)
-        cls.memory_handler = dump_loader.load(cls.dumpname)
+        cls.memory_handler = folder.load(cls.dumpname)
         cls.my_target = cls.memory_handler.get_target_platform()
         cls.my_ctypes = cls.my_target.get_target_ctypes()
         cls.my_utils = cls.my_target.get_target_ctypes_utils()

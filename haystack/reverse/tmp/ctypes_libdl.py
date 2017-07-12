@@ -12,6 +12,7 @@ import sys
 
 ''' insure ctypes basic types are subverted '''
 from haystack import model
+from haystack.mappings import folder
 
 __author__ = "Loic Jaquemet loic.jaquemet+python@gmail.com"
 
@@ -148,9 +149,8 @@ def buildMappingsHashes(maps):
 
 
 def getDiff(d1, d2):
-    from haystack import dump_loader
-    mappings1 = dump_loader.load(d1)
-    mappings2 = dump_loader.load(d2)
+    mappings1 = folder.load(d1)
+    mappings2 = folder.load(d2)
     log.debug('Building hashes for %s' % d1.name)
     m1 = dict(buildMappingsHashes(mappings1))
     log.debug('Building hashes for %s' % d2.name)

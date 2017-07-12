@@ -8,7 +8,7 @@ from __future__ import print_function
 import logging
 import unittest
 
-from haystack import dump_loader
+from haystack.mappings import folder
 from haystack.reverse import config
 from haystack.reverse import context
 from haystack.reverse import fieldtypes
@@ -27,7 +27,7 @@ class TestField(SrcTests):
         cls.dumpname = 'test/src/test-ctypes6.32.dump'
         config.remove_cache_folder(cls.dumpname)
 
-        cls.memory_handler = dump_loader.load(cls.dumpname)
+        cls.memory_handler = folder.load(cls.dumpname)
         cls._target = cls.memory_handler.get_target_platform()
         finder = cls.memory_handler.get_heap_finder()
         heap_walker = finder.list_heap_walkers()[0]

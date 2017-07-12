@@ -6,7 +6,7 @@ import logging
 import timeit
 import unittest
 
-from haystack import dump_loader
+from haystack.mappings import folder
 from haystack.mappings.base import AMemoryMapping
 from haystack.mappings.base import MemoryHandler
 from haystack.mappings.file import LocalMemoryMapping
@@ -105,8 +105,8 @@ class TestPointerEnumeratorReal(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._memory_handler = dump_loader.load(zeus_856_svchost_exe.dumpname)
-        #cls._memory_handler = dump_loader.load(putty_1_win7.dumpname)
+        cls._memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
+        #cls._memory_handler = folder.load(putty_1_win7.dumpname)
         cls._utils = cls._memory_handler.get_target_platform().get_target_ctypes_utils()
         return
 

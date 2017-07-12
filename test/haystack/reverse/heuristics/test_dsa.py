@@ -8,7 +8,7 @@ import unittest
 import logging
 
 from haystack import target
-from haystack import dump_loader
+from haystack.mappings import folder
 from haystack.abc import interfaces
 
 from haystack.reverse import fieldtypes
@@ -216,7 +216,7 @@ class TestDSA(unittest.TestCase):
     def setUpClass(cls):
         # context.get_context('test/src/test-ctypes3.dump')
         cls.context = None
-        cls.memory_handler = dump_loader.load(putty_7124_win7.dumpname)
+        cls.memory_handler = folder.load(putty_7124_win7.dumpname)
         cls.putty7124 = context.get_context_for_address(cls.memory_handler, putty_7124_win7.known_heaps[0][0])
         cls.dsa = dsa.FieldReverser(cls.putty7124.memory_handler)
         cls.memory_handler = cls.putty7124.memory_handler
@@ -344,8 +344,7 @@ class TestFieldAnalyserReal(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        from haystack import dump_loader
-        cls.memory_handler = dump_loader.load(zeus_856_svchost_exe.dumpname)
+        cls.memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
         cls.context = context.get_context_for_address(cls.memory_handler, 0x90000)
         cls.target = cls.memory_handler.get_target_platform()
         cls.zeroes = dsa.ZeroFields(cls.memory_handler)
@@ -380,8 +379,7 @@ class TestFieldAnalyserReal(unittest.TestCase):
 class TestTextFieldCorrection(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        from haystack import dump_loader
-        cls.memory_handler = dump_loader.load(zeus_856_svchost_exe.dumpname)
+        cls.memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
         cls.heap_context = context.get_context_for_address(cls.memory_handler, 0x90000)
         cls.target = cls.memory_handler.get_target_platform()
 
