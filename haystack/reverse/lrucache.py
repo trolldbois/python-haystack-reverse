@@ -198,24 +198,3 @@ class LRUCache(object):
         else:
             node = self.__dict[key]
             return node.mtime
-
-if __name__ == "__main__":
-    cache = LRUCache(25)
-    print(cache)
-    for i in range(50):
-        cache[i] = str(i)
-    print(cache)
-    if 46 in cache:
-        del cache[46]
-    print(cache)
-    cache.size = 10
-    print(cache)
-    cache[46] = '46'
-    print(cache)
-    print(len(cache))
-    for c in cache:
-        print(c)
-    print(cache)
-    print(cache.mtime(46))
-    for c in cache:
-        print(c)
