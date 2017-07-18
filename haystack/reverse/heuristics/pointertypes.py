@@ -63,7 +63,7 @@ class PointerFieldReverser(model.AbstractReverser):
                 field.type.set_pointer_to_ext_lib()
                 field.type.set_pointee_ctype('void')
                 # TODO: Function pointer ?
-                field.name = 'ptr_ext_lib_%d' % field.type.offset
+                field.type.name = 'ptr_ext_lib_%d' % field.type.offset
                 # if value in self.__functions_pointers:
                 #    size, bbs, name = self.__functions_pointers[value]
                 #    field.name = 'func_ptr_%s_%d' % (name, field.offset)
@@ -77,7 +77,7 @@ class PointerFieldReverser(model.AbstractReverser):
                 log.debug('there is no child structure enclosing pointed value %0.8x - %s', value, e)
                 field.type.set_pointee_desc('MemoryHandler management space')
                 field.type.set_pointee_ctype('void')
-                field.name = 'ptr_void_%d' % field.type.offset
+                field.type.name = 'ptr_void_%d' % field.type.offset
                 continue
             # structure found
             ## log.debug('Looking at child id:0x%x str:%s', tgt.address, tgt.to_string())
@@ -92,7 +92,7 @@ class PointerFieldReverser(model.AbstractReverser):
                 log.debug('there is no field at pointed value %0.8x. May need splitting byte field - %s', value, e)
                 field.type.set_pointee_desc('Badly reversed field')
                 field.type.set_pointee_ctype('void')
-                field.name = 'ptr_void_%d' % field.type.offset
+                field.type.name = 'ptr_void_%d' % field.type.offset
                 continue
             # do not put exception for field 0. structure name should appears
             # anyway.
@@ -104,7 +104,7 @@ class PointerFieldReverser(model.AbstractReverser):
             # offset
             field.type.set_pointee_ctype(tgt.name)
             # field.name = '%s_%s_%d' % (tgt.name, tgt_field.name, field.offset)
-            field.name = 'ptr_%s_%d' % (tgt.name, field.type.offset)
+            field.type.name = 'ptr_%s_%d' % (tgt.name, field.type.offset)
             # all
 
         _record.set_reverse_level(self._reverse_level)
