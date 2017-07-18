@@ -552,7 +552,7 @@ class %s(ctypes.Structure):  # %s
 
 
 # FIXME  maybe instances field and record should have no name.
-# __str__ should combinae type.name with @address
+# __str__ should combine type.name with @address
 class FieldInstance(object):
     """
     The instance of a Field
@@ -571,6 +571,7 @@ class FieldInstance(object):
         return self._field_decl
 
     def get_value_for_field(self, max_len=120):
+        # call the .value property instead
         my_bytes = self.__get_value_for_field_inner(max_len)
         if isinstance(my_bytes, str):
             bl = len(str(my_bytes))

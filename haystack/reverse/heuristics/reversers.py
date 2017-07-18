@@ -474,9 +474,9 @@ class PointerGraphReverser(model.AbstractReverser):
         # for child in struct.getPointerFields()) #target_struct_addr
         # target_struct_addr
 
-        pointer_fields = [f for f in _record.get_fields() if f.is_pointer()]
+        pointer_fields = [f for f in _record.get_fields() if f.type.is_pointer()]
         for f in pointer_fields:
-            pointee_addr = f._child_addr
+            pointee_addr = f.value  # f._child_addr
             # we always feed these two
             # TODO: if a Node is out of heap/segment, replace it by a virtual node & color representing
             # the foreign heap/segment
@@ -675,8 +675,8 @@ class StringsReverser(model.AbstractReverser):
 
     def reverse_record(self, _context, _record):
         for field in _record.get_fields():
-            addr = _record.address + field.offset
-            if field.is_string():
-                maxlen = len(field)
-                value = _record.get_value_for_field(field, maxlen+10)
+            addr = _record.address + field.type.offset
+            if field.type.is_string():
+                maxlen = len(field.type)
+                value = field.get_value_for_field(maxlen+10)
                 self.fout.write("0x%x,%d,%s\n" % (addr, maxlen, value))

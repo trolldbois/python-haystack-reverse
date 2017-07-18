@@ -40,18 +40,18 @@ class PointerFieldReverser(model.AbstractReverser):
         """
         # If you want to cache resolved infos, it still should be decided by
         # the caller
-        pointer_fields = [field for field in _record.record_type.get_fields() if field.is_pointer()]
+        pointer_fields = [field for field in _record.get_fields() if field.type.is_pointer()]
         log.debug('got %d pointer fields', len(pointer_fields))
         for field in pointer_fields:
-            #value = field.value
+            value = field.value
             # get the FieldInstance, and its value.
-            # FIXME This is messed up, this set_pointee_addr method should be in FieldInstance
-            value = _record.get_field(field.name).value
-            field.set_pointee_addr(value)  # default
+            # ? FIX ME This is messed up, this set_pointee_addr method should be in FieldInstance
+            #value = _record.get_field(field.name).value
+            #field.set_pointee_addr(value)  # default
             # FIXME field.set_resolved() # What ?
             # + if value is unaligned, mark it as cheesy
             if value % self._target.get_word_size():
-                field.comment = 'Unaligned pointer value'
+                field.type.comment = 'Unaligned pointer value'
             # + ask _memory_handler for the context for that value
             try:
                 ctx = context.get_context_for_address(self._memory_handler, value)  # no error expected.
@@ -60,10 +60,10 @@ class PointerFieldReverser(model.AbstractReverser):
                 # value is a pointer, but not to a heap.
                 m = self._memory_handler.get_mapping_for_address(value)
                 # field.set_child_desc('ext_lib @%0.8x %s' % (m.start, m.pathname))
-                field.set_pointer_to_ext_lib()
-                field.set_pointee_ctype('void')
+                field.type.set_pointer_to_ext_lib()
+                field.type.set_pointee_ctype('void')
                 # TODO: Function pointer ?
-                field.name = 'ptr_ext_lib_%d' % field.offset
+                field.name = 'ptr_ext_lib_%d' % field.type.offset
                 # if value in self.__functions_pointers:
                 #    size, bbs, name = self.__functions_pointers[value]
                 #    field.name = 'func_ptr_%s_%d' % (name, field.offset)
@@ -75,35 +75,36 @@ class PointerFieldReverser(model.AbstractReverser):
             # there is no child structure member at pointed value.
             except (IndexError, ValueError) as e:
                 log.debug('there is no child structure enclosing pointed value %0.8x - %s', value, e)
-                field.set_pointee_desc('MemoryHandler management space')
-                field.set_pointee_ctype('void')
-                field.name = 'ptr_void_%d' % field.offset
+                field.type.set_pointee_desc('MemoryHandler management space')
+                field.type.set_pointee_ctype('void')
+                field.name = 'ptr_void_%d' % field.type.offset
                 continue
             # structure found
             ## log.debug('Looking at child id:0x%x str:%s', tgt.address, tgt.to_string())
             # we always point on structure, not field
-            field.set_pointee_addr(tgt.address)
+            # FIXME this is really a meta pointer instance thing
+            field.type.set_pointee_addr(tgt.address)
             offset = value - tgt.address
             try:
                 tgt_field = tgt.get_field_at_offset(offset)  # @throws IndexError
             except IndexError as e:
                 # there is no field right there
                 log.debug('there is no field at pointed value %0.8x. May need splitting byte field - %s', value, e)
-                field.set_pointee_desc('Badly reversed field')
-                field.set_pointee_ctype('void')
-                field.name = 'ptr_void_%d' % field.offset
+                field.type.set_pointee_desc('Badly reversed field')
+                field.type.set_pointee_ctype('void')
+                field.name = 'ptr_void_%d' % field.type.offset
                 continue
             # do not put exception for field 0. structure name should appears
             # anyway.
-            field.set_pointee_desc('%s.%s' % (tgt.name, tgt_field.name))
+            field.type.set_pointee_desc('%s.%s' % (tgt.name, tgt_field.name))
             # TODO:
             # do not complexify code by handling target field type,
             # lets start with simple structure type pointer,
             # later we would need to use tgt_field.ctypes depending on field
             # offset
-            field.set_pointee_ctype(tgt.name)
+            field.type.set_pointee_ctype(tgt.name)
             # field.name = '%s_%s_%d' % (tgt.name, tgt_field.name, field.offset)
-            field.name = 'ptr_%s_%d' % (tgt.name, field.offset)
+            field.name = 'ptr_%s_%d' % (tgt.name, field.type.offset)
             # all
 
         _record.set_reverse_level(self._reverse_level)

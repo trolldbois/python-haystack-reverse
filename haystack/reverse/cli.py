@@ -21,7 +21,7 @@ REVERSE_HEX_DESC = 'Show the Hex values for the record at that address.'
 
 def show_hex(args):
     """ Show the Hex values for the record at that address. """
-    memory_handler = cli.get_memory_handler(args)
+    memory_handler = cli.make_memory_handler(args)
     process_context = memory_handler.get_reverse_context()
     ctx = process_context.get_context_for_address(args.address)
     try:
@@ -35,10 +35,10 @@ def show_hex(args):
 def show_predecessors_cmdline(args):
     """
     Show the predecessors that point to a record at a particular address.
-    :param opt:
+    :param args: cmdline args
     :return:
     """
-    memory_handler = cli.get_memory_handler(args)
+    memory_handler = cli.make_memory_handler(args)
     process_context = memory_handler.get_reverse_context()
     ctx = process_context.get_context_for_address(args.address)
     try:
@@ -58,7 +58,7 @@ def show_predecessors_cmdline(args):
 
 def reverse_show_cmdline(args):
     """ Show the record at a specific address. """
-    memory_handler = cli.get_memory_handler(args)
+    memory_handler = cli.make_memory_handler(args)
     process_context = memory_handler.get_reverse_context()
     ctx = process_context.get_context_for_address(args.address)
     try:
@@ -73,7 +73,7 @@ def reverse_cmdline(args):
     """ Reverse """
     from haystack.reverse import api as rapi
     # get the memory handler adequate for the type requested
-    memory_handler = cli.get_memory_handler(args)
+    memory_handler = cli.make_memory_handler(args)
     # do the search
     rapi.reverse_instances(memory_handler)
     return
@@ -111,7 +111,7 @@ def reverse_parents():
     desc = REVERSE_PARENT_DESC
     rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
     rootparser.add_argument('address', type=argparse_utils.int16, action='store', default=None,
-                        help='Hex address of the child structure')
+                            help='Hex address of the child structure')
     rootparser.set_defaults(func=show_predecessors_cmdline)
     opts = rootparser.parse_args(argv)
     # apply verbosity

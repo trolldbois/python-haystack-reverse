@@ -15,6 +15,8 @@ log = logging.getLogger('constraints')
 
 
 class ConstraintsReverser(object):
+    # TODO: ConstraintsReverser need to work on RecordInstance and not RecordType
+    # so that value of fields can be evaluated.
     def __init__(self, memory_handler):
         self.__memory_handler = memory_handler
         self.__process_context = memory_handler.get_reverse_context()
@@ -50,6 +52,7 @@ class ConstraintsReverser(object):
                 continue
             values = []
             for _item in records:
+                # BUG AttributeError: 'AnonymousRecord' object has no attribute 'get_value_for_field'
                 val = _item.get_value_for_field(field)
                 if field.is_pointer():
                     values.append(hex(val))
