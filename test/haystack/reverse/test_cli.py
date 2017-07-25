@@ -42,6 +42,7 @@ class TestReverseBasic(unittest.TestCase):
             # b'USERPROFILE=C:\\Documents and Settings\\UserName\x00\x00'
 
     def test_reverse_parent(self):
+        # FIXME most certainly, parents need a cache already setup
         testargs = ["haystack-reverse-parents", self.dumpname, '0x543f60']
         with mock.patch.object(sys, 'argv', testargs):
             cli.reverse_parents()
