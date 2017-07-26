@@ -16,13 +16,11 @@ log = logging.getLogger("test_reverse_cli")
 
 class TestReverseBasic(unittest.TestCase):
 
-    def setUp(self):
-        self.dumpname = 'dmp://./test/dumps/minidump/cmd.dmp'
-        self.cache_dumpname = self.dumpname[8:]+'.d'
-        config.remove_cache_folder(self.cache_dumpname)
-
-    def tearDown(self):
-        config.remove_cache_folder(self.cache_dumpname)
+    @classmethod
+    def setUpClass(cls):
+        cls.dumpname = 'dmp://./test/dumps/minidump/cmd.dmp'
+        cls.cache_dumpname = cls.dumpname[8:]+'.d'
+        config.remove_cache_folder(cls.cache_dumpname)
 
     def test_reverse(self):
         testargs = ["haystack-reverse", self.dumpname]
@@ -42,7 +40,7 @@ class TestReverseBasic(unittest.TestCase):
             # output is
             # b'USERPROFILE=C:\\Documents and Settings\\UserName\x00\x00'
 
-    def test_reverse_parent(self):
+    def test_reverse_parents(self):
         # FIXME most certainly, parents need a cache already setup
         testargs = ["haystack-reverse-parents", self.dumpname, '0x543f60']
         with mock.patch.object(sys, 'argv', testargs):
