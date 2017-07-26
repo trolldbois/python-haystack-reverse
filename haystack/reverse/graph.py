@@ -19,6 +19,8 @@ from haystack import argparse_utils
 from haystack.mappings import folder
 from haystack.reverse import config
 from haystack.reverse import utils
+from haystack import cli
+from networkx.drawing.nx_agraph import graphviz_layout
 
 """
 Graph tools to represent allocations in a graph.
@@ -29,14 +31,21 @@ That allows graph algorithms applications.
 log = logging.getLogger('graph')
 
 
-def printGraph(G, gname):
+def print_graph(G, memory_handler):
     h = networkx.DiGraph()
     h.add_edges_from(G.edges())
-    networkx.draw_graphviz(h)
-    fname = os.path.sep.join([config.imgCacheDir, 'graph_%s.png' % gname])
+    # networkx.draw_graphviz(h)
+    layout = graphviz_layout(h)
+    networkx.draw(h, layout)
+    filename = memory_handler.get_name()
+    print(filename)
+    bname = os.path.basename(filename)
+    cache_dir = config.get_cache_folder_name(filename)
+    print(cache_dir)
+    fname = os.path.sep.join([cache_dir, 'graph_%s.png' % bname])
     plt.savefig(fname)
     plt.clf()
-    fname = os.path.sep.join([config.cacheDir, 'graph_%s.gexf' % gname])
+    fname = os.path.sep.join([cache_dir, 'graph_%s.gexf' % bname])
     networkx.readwrite.gexf.write_gexf(h, fname)
     return
 
@@ -74,12 +83,7 @@ def save_graph_headers(ctx, graph, fname):
 
 
 def make(opts):
-    fname = opts.gexf
-
-    # if __name__ == '__main__':
-    # if False:
-    #ctx = context.get_context('../../outputs/skype.1.a')
-    memory_handler = folder.load(opts.dumpname)
+    memory_handler = cli.make_memory_handler(opts)
 
     #digraph=networkx.readwrite.gexf.read_gexf(  '../../outputs/skype.1.a.gexf')
     digraph = networkx.readwrite.gexf.read_gexf(opts.gexf.name)
@@ -87,14 +91,16 @@ def make(opts):
     heap = finder.list_heap_walkers()[0]
 
     # only add heap structure with links
-    edges = [
-        (x, y) for x, y in digraph.edges() if int(
-            x, 16) in heap and int(
-            y, 16) in heap]
+    # edges = [
+    #     (x, y) for x, y in digraph.edges() if int(
+    #         x, 16) in heap and int(
+    #         y, 16) in heap]
+    heap_mapping = heap.get_heap_mapping()
+    edges = [(x, y) for x, y in digraph.edges() if int(x, 16) in heap_mapping and int(y, 16) in heap_mapping]
     graph = networkx.DiGraph()
     graph.add_edges_from(edges)
 
-    printGraph(graph, os.path.basename(opts.dumpname))
+    print_graph(graph, memory_handler)
 
 
 def clean(digraph):
@@ -247,50 +253,18 @@ def deref(ctx, f):
 # s2b should start with \x00's
 
 
-def argparser():
-    rootparser = argparse.ArgumentParser(
-        prog='haystack-reversers-graph',
-        description='Play with graph repr of pointers relationships.')
-    rootparser.add_argument(
-        '--debug',
-        action='store_true',
-        help='Debug mode on.')
-    rootparser.add_argument(
-        'gexf',
-        type=argparse.FileType('rb'),
-        action='store',
-        help='Source gexf.')
-    rootparser.add_argument(
-        'dumpname',
-        type=argparse_utils.readable,
-        action='store',
-        help='Source gexf.')
-    rootparser.set_defaults(func=make)
-    return rootparser
-
-
 def main(argv):
-    parser = argparser()
-    opts = parser.parse_args(argv)
-
-    level = logging.INFO
-    if opts.debug:
-        level = logging.DEBUG
-
-    flog = os.path.normpath('log')
-    logging.basicConfig(level=level, filename=flog, filemode='w')
-
-    # logging.getLogger('haystack').setLevel(logging.INFO)
-    # logging.getLogger('dumper').setLevel(logging.INFO)
-    # logging.getLogger('structure').setLevel(logging.INFO)
-    # logging.getLogger('field').setLevel(logging.INFO)
-    # logging.getLogger('progressive').setLevel(logging.INFO)
-    logging.getLogger('graph').addHandler(logging.StreamHandler(stream=sys.stdout))
-
-    log.info('[+] output log to %s' % flog)
-
+    argv = sys.argv[1:]
+    desc = 'Play with graph repr of pointers relationships.'
+    rootparser = cli.base_argparser(program_name=os.path.basename(sys.argv[0]), description=desc)
+    rootparser.add_argument('gexf', type=argparse.FileType('rb'), action='store', help='Source gexf.')
+    rootparser.set_defaults(func=make)
+    opts = rootparser.parse_args(argv)
+    # apply verbosity
+    cli.set_logging_level(opts)
+    # execute function
     opts.func(opts)
-
+    return
 
 if __name__ == '__main__':
     main(sys.argv[1:])

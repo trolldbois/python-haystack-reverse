@@ -10,8 +10,6 @@ import os
 log = logging.getLogger('config')
 
 
-cacheDir = os.path.normpath('/tmp/')
-imgCacheDir = os.path.sep.join([cacheDir, 'img'])
 commentMaxSize = 64
 #
 DUMPNAME_INDEX_FILENAME = '_memory_handler'
