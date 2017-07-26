@@ -138,18 +138,27 @@ class ProcessContext(object):
         return self.__contextes.values()
 
     def get_reversed_type(self, typename):
+        """Returns the list of address of records for that typename"""
         if typename in self.__reversed_types:
             return self.__reversed_types[typename]
         return None
 
     def add_reversed_type(self, typename, t):
+        """Add an instance address for this reversed typename.
+        Called by :
+        - ReversedType.create (static) when creating a new reversed type.
+            ( only used in uncalled code in signature.py )
+        - DoubleLinkedListReverser
+        - ConstraintsReverser - activate() - Unused ??
+        """
         self.__reversed_types[typename] = t
 
     def list_reversed_types(self):
+        """List all names of reversed types"""
         return self.__reversed_types.keys()
 
-    #def _load_reversed_types(self):
-    #    self.__reversed_types = pickle.load()
+    # def _load_reversed_types(self):
+    #     self.__reversed_types = pickle.load()
 
     def save_reversed_types(self):
         """
@@ -162,6 +171,7 @@ class ProcessContext(object):
         nb_total = 0
         nb_unique = 0
         for nb_unique, r_type in enumerate(self.list_reversed_types()):
+            # get the address of the instances for that reversed type.
             members = self.get_reversed_type(r_type)
             nb_total += len(members)
             from haystack.reverse.heuristics import constraints

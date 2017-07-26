@@ -22,6 +22,7 @@ class ConstraintsReverser(object):
         self.__process_context = memory_handler.get_reverse_context()
 
     def activate(self, _record_type, members):
+        # FIXME - uncalled anywhere
         # apply the fields template to all members of the list
         for list_item_addr in members:
             _context = self.__process_context.get_context_for_address(list_item_addr)
@@ -46,23 +47,25 @@ class ConstraintsReverser(object):
         lines.append('# instances: [%s]' % (','.join(['0x%x' % addr for addr in members])))
 
         # check fields values
-        for i, field in enumerate(_record_type.get_fields()):
-            if field.is_record():
+        for i, field_decl in enumerate(_record_type.get_fields()):
+            if field_decl.is_record():
                 # we ignore the subrecord. is too complicated to show.
                 continue
             values = []
-            for _item in records:
+            for record in records:
                 # BUG AttributeError: 'AnonymousRecord' object has no attribute 'get_value_for_field'
-                val = _item.get_value_for_field(field)
-                if field.is_pointer():
+                # get the field instance
+                field_instance = record.get_field(field_decl.name)
+                val = field_instance.value
+                if field_decl.is_pointer():
                     values.append(hex(val))
                 else:
                     values.append(val)
-            if field.is_zeroes() and len(values) == 1:
+            if field_decl.is_zeroes() and len(values) == 1:
                 values = [0]
                 # ignore the field in that case.
                 continue
             counter = Counter(values)
             # print 'field: %s values: %s' % (field.name, counter)
-            lines.append('# field: %s values: %s' % (field.name, counter))
+            lines.append('# field: %s values: %s' % (field_decl.name, counter))
         return lines
