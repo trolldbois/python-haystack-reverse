@@ -53,7 +53,6 @@ class ConstraintsReverser(object):
                 continue
             values = []
             for record in records:
-                # BUG AttributeError: 'AnonymousRecord' object has no attribute 'get_value_for_field'
                 # get the field instance
                 field_instance = record.get_field(field_decl.name)
                 val = field_instance.value
