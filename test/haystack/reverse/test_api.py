@@ -42,6 +42,12 @@ class TestReverseApi(unittest.TestCase):
             print(p.to_string())
         pass
 
+    def test_reverse_instances(self):
+        api.reverse_instances(self.memory_handler)
+        # TODO
+        return
+
+
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     # logging.getLogger("listmodel").setLevel(logging.DEBUG)

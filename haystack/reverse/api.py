@@ -9,6 +9,7 @@ from haystack.reverse import context
 from haystack.reverse.heuristics import reversers
 from haystack.reverse.heuristics import dsa
 from haystack.reverse.heuristics import pointertypes
+from haystack.reverse.heuristics import signature
 
 log = logging.getLogger('reverse.api')
 
@@ -127,6 +128,10 @@ def reverse_instances(memory_handler):
     log.info('Reversing PointerFields')
     pfr = pointertypes.PointerFieldReverser(memory_handler)
     pfr.reverse()
+
+    # then we try to match similar record type together
+    sig_type_rev = signature.TypeReverser(memory_handler)
+    sig_type_rev.reverse()
 
     # save that
     log.info('Saving reversed records instances')

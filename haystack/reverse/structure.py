@@ -93,7 +93,7 @@ def cache_load_all_lazy(_context):
     return
 
 
-class CacheWrapper:
+class CacheWrapper(object):
     """
     this is kind of a weakref proxy, but hashable
     """
@@ -111,26 +111,36 @@ class CacheWrapper:
         self._memory_handler = _context.memory_handler
         self.obj = None
 
-    def __getattr__(self, *args):
-        if self.obj is None or self.obj() is None:  #
-            self._load()
-        return getattr(self.obj(), *args)
+    def __getattr__(self, item):
+        if item in ['_fname', 'address', '_memory_handler', 'obj']:
+            return self.__dict__.get(item)
+        self.__load()
+        return getattr(self.obj(), item)
+
+    def __setattr__(self, key, value):
+        if key in ['_fname', 'address', '_memory_handler', 'obj']:
+            super(CacheWrapper, self).__setattr__(key, value)
+            return
+        setattr(self.__load(), key, value)
 
     def unload(self):
         if self.address in CacheWrapper.refs:
             del CacheWrapper.refs[self.address]
         self.obj = None
 
-    def _load(self):
-        if self.obj is not None:  #
-            if self.obj() is not None:  #
-                return self.obj()
+    def __load(self):
+        if "obj" in self.__dict__:
+            _ = self.__dict__.get("obj")
+            if _ is not None:
+                if _() is not None:
+                    return _()
+        _fname = self.__dict__.get("_fname")
         try:
-            with open(self._fname, 'rb') as fin:
+            with open(_fname, 'rb') as fin:
                 p = pickle.load(fin)
         except (EOFError, ValueError) as e:
-            log.error('Could not load %s - removing it %s', self._fname, e)
-            os.remove(self._fname)
+            log.error('Could not load %s - removing it %s', _fname, e)
+            os.remove(_fname)
             raise e  # bad file removed
         if not isinstance(p, AnonymousRecord):
             raise EOFError("not a AnonymousRecord in cache. %s", p.__class__)
@@ -140,7 +150,7 @@ class CacheWrapper:
         p._dirty = False
         CacheWrapper.refs[self.address] = p
         self.obj = weakref.ref(p)
-        return
+        return self.obj()
 
     def save(self):
         if self.obj() is None:
@@ -162,9 +172,7 @@ class CacheWrapper:
         return self.address < other.address
 
     def __len__(self):
-        if self.obj is None or self.obj() is None:  #
-            self._load()
-        return len(self.obj())
+        return len(self.__load())
 
     #def __cmp__(self, other):
     #    return cmp(self.address, other.address)
@@ -486,10 +494,19 @@ class %s(%s):  # %s
 
 
 class ReversedType(ctypes.Structure):
+# class ReversedType(object):
     """
     A reversed record type.
 
     TODO: explain the usage.
+
+    FIXME: oh very wrong:
+    1. ctypes.Structure are not pickable
+    2. we really need to inherit the memory handler target platform ctypes, not this code exec ctype.
+    3. this is basically a duplicate of instance.record_type, but in ctype
+    4. to string is not implementable in class, so we use a outputter
+    5. and even that doesn't work. Why create a ctype?
+    6. total duplicate function of recortype
     """
 
     @classmethod
@@ -497,57 +514,60 @@ class ReversedType(ctypes.Structure):
         ctypes_type = process_context.get_reversed_type(name)
         if ctypes_type is None:  # make type an register it
             ctypes_type = type(name, (cls,), {'_instances': dict()})  # leave _fields_ out
+            ctypes_mod = process_context.memory_handler.get_target_platform().get_target_ctypes()
+            ctypes_type.ctypes = ctypes_mod
             process_context.add_reversed_type(name, ctypes_type)
         return ctypes_type
 
     @classmethod
-    def addInstance(cls, anonymousStruct):
+    def add_instance(cls, _record):
         """
         add the instance to be a instance of this type
 
         :param anonymousStruct:
         :return:
         """
-        vaddr = anonymousStruct._vaddr
-        cls._instances[vaddr] = anonymousStruct
+        cls._instances[_record.address] = _record
 
     #@classmethod
     # def setFields(cls, fields):
     #  cls._fields_ = fields
 
     @classmethod
-    def getInstances(cls):
+    def get_instances(cls):
         return cls._instances
 
     @classmethod
-    def makeFields(cls, _context):
+    def make_fields(cls):
         # print '****************** makeFields(%s, context)'%(cls.__name__)
-        root = cls.getInstances().values()[0]
+        root = list(cls.get_instances().values())[0]
         # try:
-        for f in root.get_fields():
+        for f in root.record_type.get_fields():
             print(f, f.get_ctype())
-        cls._fields_ = [(f.get_name(), f.get_ctype()) for f in root.get_fields()]
+        cls._fields_ = [(f.get_name(), f.get_ctype()) for f in root.record_type.get_fields()]
         # except AttributeError,e:
         #  for f in root.getFields():
         #    print 'error', f.get_name(), f.getCtype()
 
-    #@classmethod
-    def to_string(self):
+    @classmethod
+    def to_string(cls):
         fieldsStrings = []
-        for attrname, attrtyp in self.get_fields():  # model
+        # for attrname, attrtyp in self.get_fields():  # model
+        for attrname, attrtyp in cls._fields_:
             # FIXME need ctypesutils.
-            if self.ctypes.is_pointer_type(attrtyp) and not self.ctypes.is_pointer_to_void_type(attrtyp):
+            if cls.ctypes.is_pointer_type(attrtyp) and not cls.ctypes.is_pointer_to_void_type(attrtyp):
                 fieldsStrings.append('(%s, ctypes.POINTER(%s) ),\n' % (attrname, attrtyp._type_.__name__))
             else:  # pointers not in the heap.
                 fieldsStrings.append('(%s, %s ),\n' % (attrname, attrtyp.__name__))
         fieldsString = '[ \n%s ]' % (''.join(fieldsStrings))
 
-        info = 'size:%d' % (self.ctypes.sizeof(self))
+        # info = 'size:%d' % (cls.ctypes.sizeof(cls))
+        info = 'size:%d' % (cls.ctypes.sizeof(cls))
         ctypes_def = '''
 class %s(ctypes.Structure):  # %s
   _fields_ = %s
 
-''' % (self.__name__, info, fieldsString)
+''' % (cls.__name__, info, fieldsString)
         return ctypes_def
 
 

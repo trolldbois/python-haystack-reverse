@@ -71,11 +71,10 @@ def reverse_show_cmdline(args):
 
 def reverse_cmdline(args):
     """ Reverse """
-    from haystack.reverse import api as rapi
     # get the memory handler adequate for the type requested
     memory_handler = cli.make_memory_handler(args)
     # do the search
-    rapi.reverse_instances(memory_handler)
+    api.reverse_instances(memory_handler)
     return
 
 

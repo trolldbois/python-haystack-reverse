@@ -88,6 +88,7 @@ class BasicCachingReverser(model.AbstractReverser):
             log.error("Negative allocation size")
             raise ValueError("Negative allocation size")
         mystruct = structure.AnonymousRecord(_context.memory_handler, ptr_value, size)
+        # FIXME bad
         _context._structures[ptr_value] = mystruct
         # cache to disk
         mystruct.saveme(_context)
@@ -396,7 +397,8 @@ class DoubleLinkedListReverser(model.AbstractReverser):
 
         # push the LIST_ENTRY type into the context/memory_handler
         rev_context = self._memory_handler.get_reverse_context()
-        rev_context.add_reversed_type(new_record_type, _members)
+        # FIXME: doubtful that this is considered a reversed type.
+        # rev_context.add_reversed_type(new_record_type, ??? )
 
         # change the list_head name back
         _context = self._process_context.get_context_for_address(head_addr)

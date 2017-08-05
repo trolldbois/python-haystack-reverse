@@ -34,17 +34,21 @@ class ConstraintsReverser(object):
 
         return
 
-    def verify(self, _record_type, members):
+    def verify(self, _record_type_name, members_addresses):
         records = []
         lines = []
+        ref_addr = members_addresses[0]
+        _context = self.__process_context.get_context_for_address(ref_addr)
+        _item = _context.get_record_for_address(ref_addr)
+        _record_type = _item.record_type
         # try to apply the fields template to all members of the list
-        for list_item_addr in members:
+        for list_item_addr in members_addresses:
             _context = self.__process_context.get_context_for_address(list_item_addr)
             _item = _context.get_record_for_address(list_item_addr)
             new_record = structure.AnonymousRecord(self.__memory_handler, _item.address, len(_item), name=None)
             new_record.set_record_type(_record_type, True)
             records.append(new_record)
-        lines.append('# instances: [%s]' % (','.join(['0x%x' % addr for addr in members])))
+        lines.append('# instances: [%s]' % (','.join(['0x%x' % addr for addr in members_addresses])))
 
         # check fields values
         for i, field_decl in enumerate(_record_type.get_fields()):

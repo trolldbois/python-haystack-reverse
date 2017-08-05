@@ -22,7 +22,6 @@ class TestTypeReverser(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
-        cls._context = context.get_context_for_address(cls.memory_handler, 0x90000)
         cls.process_context = cls.memory_handler.get_reverse_context()
         fr = dsa.FieldReverser(cls.memory_handler)
         fr.reverse()
@@ -37,10 +36,11 @@ class TestTypeReverser(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.memory_handler = None
-        cls._context = None
 
     def test_doublelink(self):
         # we need a basic reversing first - see this UT class setUP
+        address = 0xccd00
+        _context = context.get_context_for_address(self.memory_handler, address)
 
         rev = signature.TypeReverser(self.memory_handler)
         # interesting records
@@ -48,13 +48,21 @@ class TestTypeReverser(unittest.TestCase):
         # struct_bbf78 struct_a6518 struct_cca28
         # list goes from 0xccd28, 0xccd00 to 0x98268
         #_record = self._context.get_record_for_address(0xccd28)
-        _record = self._context.get_record_for_address(0xccd00)
+        _record = _context.get_record_for_address(address)
         print("Before:")
         print(_record.to_string())
-        _record.set_reverse_level(10)
-        rev.reverse_context(self._context)
+        rev.reverse_context(_context)
+        _record = _context.get_record_for_address(address)
         print("After:")
         print(_record.to_string())
+
+        name_root = _record.name.split('_')[0]
+        process_context = self.memory_handler.get_reverse_context()
+        brothers_type = process_context.get_reversed_type(name_root)
+        instances = brothers_type.get_instances()
+        print("Brothers:")
+        for addr, bro in instances.items():
+            print(bro.to_string())
         pass
 
     def test_otherlink(self):

@@ -13,6 +13,8 @@ import numpy
 import os
 
 from haystack.abc import interfaces
+from haystack.outputters import text
+
 from haystack.reverse import utils
 from haystack.reverse import config
 from haystack.reverse import structure
@@ -170,16 +172,22 @@ class ProcessContext(object):
         #
         nb_total = 0
         nb_unique = 0
-        for nb_unique, r_type in enumerate(self.list_reversed_types()):
+        text_output = text.RecursiveTextOutputter(self.memory_handler)
+        for nb_unique, r_type_name in enumerate(self.list_reversed_types()):
             # get the address of the instances for that reversed type.
-            members = self.get_reversed_type(r_type)
-            nb_total += len(members)
+            record_type = self.get_reversed_type(r_type)
+            # we want the addresses
+            members_addresses = list(ctype_decl.get_instances().keys())
+            nb_total += len(members_addresses)
+            # FIXME : extract from here to main reverse loop / type reversers
             from haystack.reverse.heuristics import constraints
             rev = constraints.ConstraintsReverser(self.memory_handler)
-            txt = rev.verify(r_type, members)
+            txt = rev.verify(r_type, members_addresses)
             towrite.extend(txt)
-            towrite.append("# %d members" % len(members))
-            towrite.append(r_type.to_string())
+            towrite.append("# %d members" % len(members_addresses))
+            # towrite.append(text_output.parse(ctype_decl))
+            ctype_decl.make_fields()
+            towrite.append(ctype_decl().to_string())
             if len(towrite) >= 10000:
                 try:
                     fout.write('\n'.join(towrite))

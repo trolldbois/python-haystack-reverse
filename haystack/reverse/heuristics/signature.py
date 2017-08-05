@@ -52,51 +52,32 @@ class TypeReverser(model.AbstractReverser):
         self._similarities = None
         try:
             import pkgutil
-            self._words = pkgutil.get_data(__name__, config.WORDS_FOR_REVERSE_TYPES_FILE)
+            self._words = pkgutil.get_data(__name__, config.WORDS_FOR_REVERSE_TYPES_FILE).decode()
         except ImportError:
             import pkg_resources
-            self._words = pkg_resources.resource_string(__name__, config.WORDS_FOR_REVERSE_TYPES_FILE)
+            self._words = pkg_resources.resource_string(__name__, config.WORDS_FOR_REVERSE_TYPES_FILE).decode()
 
-        self._NAMES = [s.strip() for s in self._words.split(b'\n')[:-1]]
+        self._NAMES = [s.strip() for s in self._words.split('\n')[:-1]]
         self._NAMES_plen = 1
-
-    def reverse(self):
-        """
-        Go over each record and call the reversing process.
-        Wraps around some time-based function to ease the wait.
-        Saves the context to cache at the end.
-        """
-        log.info('[+] %s: START', self)
-        # run the reverser
-        for _context in self._iterate_contexts():
-            self._t0 = time.time()
-            self._t1 = self._t0
-            self._nb_reversed = 0
-            self._nb_from_cache = 0
-            # call
-            self.reverse_context(_context)
-            # save the context
-            _context.save()
-        # closing statements
-        total = self._nb_from_cache + self._nb_reversed
-        ts = time.time() - self._t0
-        log.debug('[+] %s: END %d records in %2.0fs (new:%d,cache:%d)', self, total, ts, self._nb_reversed, self._nb_from_cache)
-        ####
-        return
 
     def reverse_context(self, _context):
         """
         Go over each record and call the reversing process.
         """
+        log.info('[+] %s: START on heap 0x%x', self, _context._heap_start)
         signatures = self._gather_signatures(_context)
         similarities = self._chain_similarities(signatures)
         self._rename_similar_records(self._memory_handler.get_reverse_context(), _context, similarities)
         for _record in _context.listStructures():
-            # do the changes.
             self.reverse_record(_context, _record)
-            # self._callback()
-
         _context.save()
+        return
+
+    def reverse_record(self, _context, _record):
+        # TODO: add minimum reversing level check before running
+        # if _record.get_reverse_level() < 30:
+        #     raise RuntimeError("Please reverse records before calling this")
+        _record.set_reverse_level(self._reverse_level)
         return
 
     def _gather_signatures(self, _context):
@@ -146,21 +127,24 @@ class TypeReverser(model.AbstractReverser):
         """ Fix the name of each structure to a generic word/type name """
         for chain in chains:
             name = self._make_original_type_name()
-            log.debug('\t[-] fix type of chain size:%d with name name:%s' % (len(chain), name))
+            log.debug('\t[-] fix type of chain size:%d with name:%s %s' % (len(chain), name, chain))
+            # we assume there is no similar name.
+            if process_context.get_reversed_type(name) is not None:
+                raise RuntimeError("Duplicate reversed type name. Clean cache?")
+            # FIXME : actually choose the best reference type by checking connectivity in graph ?
+            reference_type = heap_context.get_record_for_address(chain[0]).record_type
+            # FIXME: create a index of instance for each reference_type. (why ?)
+            process_context.add_reversed_type(name, reference_type)
             for addr in chain:  # chain is a list of addresses
-                addr = int(addr)
-                # FIXME - use a proper renaming tool
                 instance = heap_context.get_record_for_address(addr)
                 instance.name = name
-                ctypes_type = process_context.get_reversed_type(name)
-                if ctypes_type is None:  # make type
-                    ctypes_type = structure.ReversedType.create(process_context, name)
-                ctypes_type.addInstance(instance)
-                instance.set_ctype(ctypes_type)
-                # FIXME - does that even work ?
+                # we change the record type
+                instance.set_record_type(reference_type)
+                ctypes_type.add_instance(instance)
         return
 
     def persist(self, _context):
+        # FIXME: why save signatures ?
         outdir = _context.get_folder_cache()
         config.create_cache_folder(outdir)
         #
@@ -170,19 +154,11 @@ class TypeReverser(model.AbstractReverser):
         return
 
     def load(self, _context):
+        # FIXME: why save signatures ?
         inname = _context.get_filename_cache_signatures()
         self._similarities = utils.int_array_cache(inname)
         return
 
-    def reverse_record(self, _context, _record):
-        # TODO: add minimum reversing level check before running
-        # writing to file
-        # for ptr_value,anon in context.allocators.items():
-        #self._pfa.analyze_fields(_record)
-        sig = _record.get_signature()
-        address = _record.address
-        _record.set_reverse_level(self._reverse_level)
-        return
 
 
 class CommonTypeReverser(model.AbstractReverser):
@@ -673,7 +649,7 @@ def makeReversedTypes(heap_context, sizeCache):
 
     log.info('[+] For new reversed type, fix their definitive fields.')
     for revStructType in heap_context.list_reversed_types():
-        revStructType.makeFields(heap_context)
+        revStructType.make_fields(heap_context)
 
     # TODO - move in TypeReverser
     # poitners not in the heapv
@@ -763,7 +739,7 @@ def fixInstanceType(context, instance, name):
     ctypes_type = context.get_reversed_type(name)
     if ctypes_type is None:  # make type
         ctypes_type = structure.ReversedType.create(context, name)
-    ctypes_type.addInstance(instance)
+    ctypes_type.add_instance(instance)
     instance.set_ctype(ctypes_type)
     return ctypes_type
 
