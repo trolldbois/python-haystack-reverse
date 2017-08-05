@@ -733,39 +733,6 @@ class TestEnrichedPointerAnalyserReal(unittest.TestCase):
         pass
 
 
-class TestTypeReverser(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.memory_handler = folder.load(zeus_856_svchost_exe.dumpname)
-        cls._context = context.get_context_for_address(cls.memory_handler, 0x90000)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.memory_handler = None
-        cls._context = None
-
-    def test_doublelink(self):
-        rev = signature.TypeReverser(self.memory_handler)
-        # interesting records
-        # SIG:T4i4P4P4i4z12
-        # struct_bbf78 struct_a6518 struct_cca28
-        # list goes from 0xccd28, 0xccd00 to 0x98268
-        #_record = self._context.get_record_for_address(0xccd28)
-        _record = self._context.get_record_for_address(0xccd00)
-        print(_record.to_string())
-        _record.set_reverse_level(10)
-        rev.reverse_context(self._context)
-        print(_record.to_string())
-        pass
-
-    def test_otherlink(self):
-        # 0xa6f40, 0xa6f70
-        _record = self._context.get_record_for_address(0xccd00)
-        print(_record.to_string())
-        #import code
-        #code.interact(local=locals())
-
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     # logging.getLogger("reversers").setLevel(logging.DEBUG)
@@ -775,4 +742,5 @@ if __name__ == '__main__':
     # logging.getLogger("structure").setLevel(logging.DEBUG)
     # logging.getLogger("dsa").setLevel(logging.DEBUG)
     # logging.getLogger("winxpheap").setLevel(logging.DEBUG)
+    logging.getLogger("model").setLevel(logging.WARNING)
     unittest.main(verbosity=2)

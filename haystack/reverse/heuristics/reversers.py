@@ -342,6 +342,8 @@ class DoubleLinkedListReverser(model.AbstractReverser):
         Rename the field to reflect this .
         Rename the _record ?
 
+        Uses signature.CommonTypeReverser to find the proper record name
+
         :param _context:
         :param _members:
         :param offset:
@@ -516,7 +518,6 @@ class PointerGraphReverser(model.AbstractReverser):
         fname = os.path.sep.join([config.get_cache_folder_name(dumpname), config.CACHE_GRAPH])
         my_graph = networkx.readwrite.gexf.read_gexf(fname)
         return my_graph
-
 
 
 class ArrayFieldsReverser(model.AbstractReverser):

@@ -21,6 +21,7 @@ from haystack.reverse import utils
 from haystack.reverse import structure
 from haystack.reverse.heuristics import dsa
 from haystack.reverse.heuristics import model
+import time
 
 """
 Tools around guessing a field' type and
@@ -33,48 +34,130 @@ log = logging.getLogger('signature')
 
 class TypeReverser(model.AbstractReverser):
     """
+    Goal is to find similar types, using signatures from previous heuristics.
+    And to rename similar typed records.
+
+    Abstract Reverser, that do not go to the record level (except to get a signature).
+
+    1. Look at all structures type signatures.
+    2. Compare all signatures together (Levensthein)
+    3. group similar structures together, in a graph
+
     """
     REVERSE_LEVEL = 300
 
     def __init__(self, memory_handler):
         super(TypeReverser, self).__init__(memory_handler)
-        self._signatures = []
+        self._signatures = None
+        self._similarities = None
+        try:
+            import pkgutil
+            self._words = pkgutil.get_data(__name__, config.WORDS_FOR_REVERSE_TYPES_FILE)
+        except ImportError:
+            import pkg_resources
+            self._words = pkg_resources.resource_string(__name__, config.WORDS_FOR_REVERSE_TYPES_FILE)
 
-    def reverse_context(self, _context):
+        self._NAMES = [s.strip() for s in self._words.split(b'\n')[:-1]]
+        self._NAMES_plen = 1
+
+    def reverse(self):
         """
         Go over each record and call the reversing process.
         Wraps around some time-based function to ease the wait.
         Saves the context to cache at the end.
         """
-        import Levenshtein
-        log.debug("Gathering all signatures")
-        for _record in _context.listStructures():
-            self._signatures.append((len(_record), _record.address, _record.get_signature_text()))
-            self._nb_reversed += 1
-            self._callback(total=1) ## FIXME total should not be 1.
-        ##
-        self._similarities = []
-        for i, (size1, addr1, el1) in enumerate(self._signatures[:-1]):
-            log.debug("Comparing signatures with %s", el1)
-            for size2, addr2, el2 in self._signatures[i + 1:]:
-                if abs(size1 - size2) > 4*self._word_size:
-                    continue
-                lev = Levenshtein.ratio(el1, el2)  # seqmatcher ?
-                if lev > 0.75:
-                    #self._similarities.append( ((addr1,el1),(addr2,el2)) )
-                    self._similarities.append((addr1, addr2))
-                    # we do not need the signature.
-        # check for chains
-        # TODO we need a group maker with an iterator to push group
-        # proposition to the user
-        log.debug('\t[-] Signatures done.')
+        log.info('[+] %s: START', self)
+        # run the reverser
+        for _context in self._iterate_contexts():
+            self._t0 = time.time()
+            self._t1 = self._t0
+            self._nb_reversed = 0
+            self._nb_from_cache = 0
+            # call
+            self.reverse_context(_context)
+            # save the context
+            _context.save()
+        # closing statements
+        total = self._nb_from_cache + self._nb_reversed
+        ts = time.time() - self._t0
+        log.debug('[+] %s: END %d records in %2.0fs (new:%d,cache:%d)', self, total, ts, self._nb_reversed, self._nb_from_cache)
+        ####
+        return
 
+    def reverse_context(self, _context):
+        """
+        Go over each record and call the reversing process.
+        """
+        signatures = self._gather_signatures(_context)
+        similarities = self._chain_similarities(signatures)
+        self._rename_similar_records(self._memory_handler.get_reverse_context(), _context, similarities)
         for _record in _context.listStructures():
             # do the changes.
             self.reverse_record(_context, _record)
-            #self._callback()
+            # self._callback()
 
         _context.save()
+        return
+
+    def _gather_signatures(self, _context):
+        log.debug("Gathering all signatures")
+        signatures = []
+        for _record in _context.listStructures():
+            signatures.append((len(_record), _record.address, _record.get_signature_text()))
+            self._nb_reversed += 1
+            self._callback(total=1)  # FIXME total should not be 1.
+        # order by size
+        signatures.sort()
+        return signatures
+
+    def _chain_similarities(self, signatures):
+        import Levenshtein
+        similarities = []
+        for i, (size1, addr1, el1) in enumerate(signatures[:-1]):
+            log.debug("Comparing signatures with %s", el1)
+            for size2, addr2, el2 in signatures[i + 1:]:
+                # if abs(size1 - size2) > 4*self._word_size:
+                #     continue
+                # RULE - records with different size are not similar
+                if size2 != size1:
+                    break
+                lev = Levenshtein.ratio(el1, el2)  # seqmatcher ?
+                if lev > 0.75:
+                    similarities.append((addr1, addr2))
+                    # we do not need the signature.
+        # proposition to the user
+        log.debug('\t[-] Signatures done. %d similar couples.' % len(similarities))
+        graph = networkx.Graph()
+        graph.add_edges_from(similarities)
+        subgraphs = networkx.algorithms.components.connected.connected_component_subgraphs(graph)
+        chains = [g.nodes() for g in subgraphs]
+        for c in chains:
+            log.debug(c)
+        return chains
+
+    def _make_original_type_name(self):
+        # refill the pool if empty
+        if len(self._NAMES) == 0:
+            self._NAMES_plen += 1
+            self._NAMES = [''.join(x) for x in itertools.permutations(self._words.split('\n')[:-1], self._NAMES_plen)]
+        return self._NAMES.pop()
+
+    def _rename_similar_records(self, process_context, heap_context, chains):
+        """ Fix the name of each structure to a generic word/type name """
+        for chain in chains:
+            name = self._make_original_type_name()
+            log.debug('\t[-] fix type of chain size:%d with name name:%s' % (len(chain), name))
+            for addr in chain:  # chain is a list of addresses
+                addr = int(addr)
+                # FIXME - use a proper renaming tool
+                instance = heap_context.get_record_for_address(addr)
+                instance.name = name
+                ctypes_type = process_context.get_reversed_type(name)
+                if ctypes_type is None:  # make type
+                    ctypes_type = structure.ReversedType.create(process_context, name)
+                ctypes_type.addInstance(instance)
+                instance.set_ctype(ctypes_type)
+                # FIXME - does that even work ?
         return
 
     def persist(self, _context):
@@ -168,6 +251,7 @@ class SignatureGroupMaker:
         # get text signature for Counter to parse
         # need to force resolve of allocators
         self._signatures = []
+        # FIXME DELETE - OBSOLETE, now workflow is part of api.reverse
         decoder = dsa.FieldReverser(self._context.memory_handler)
         for addr in map(long, self._structures_addresses):
             # decode the fields
@@ -181,6 +265,7 @@ class SignatureGroupMaker:
     def make(self):
         self._init_signatures()
         #
+        # FIXME DELETE - DUPLICATE, signature.TypeReverser
         self._similarities = []
         for i, x1 in enumerate(self._signatures[:-1]):
             for x2 in self._signatures[i + 1:]:
@@ -457,6 +542,7 @@ def makeSizeCaches(dumpname):
 def buildStructureGroup(context, sizeCache, optsize=None):
     ''' Iterate of structure instances grouped by size, find similar signatures,
     and outputs a list of groups of similar allocators instances.'''
+    # FIXME DELETE - OBSOLETE, function now in TypeReverser._chain_similarities
     log.debug("\t[-] Group allocators's signatures by sizes.")
     sgms = []
     #
@@ -545,7 +631,7 @@ def graphStructureGroups(context, chains, originAddr=None):
 
 
 
-# FIXME ongoing TypeReverser
+# FIXME MOVE TO ongoing TypeReverser
 # TODO next next step, compare struct links in a DiGraph with node ==
 # struct size + pointer index as a field.
 def makeReversedTypes(heap_context, sizeCache):
@@ -553,11 +639,12 @@ def makeReversedTypes(heap_context, sizeCache):
     Makes a chains out of similar allocators. Changes the structure names for a single
     typename when possible. Changes the ctypes types of each pointer field.'''
 
-    log.info(
-        '[+] Build groups of similar instances, create a reversed type for each group.')
+    log.info('[+] Build groups of similar instances, create a reversed type for each group.')
+    # FIXME - DELETE - already in TypeReverser._rename_similar_records
     for chains in buildStructureGroup(heap_context, sizeCache):
         fixType(heap_context, chains)
 
+    # TODO - move in TypeReverser
     log.info('[+] For each instances, fix pointers fields to newly created types.')
     decoder = dsa.FieldReverser(heap_context.memory_handler)
     for s in heap_context.listStructures():
@@ -582,11 +669,14 @@ def makeReversedTypes(heap_context, sizeCache):
                 f.set_pointee_ctype(ctypes.POINTER(ctypes_type))
                 f.set_comment('pointer fixed')
 
+    # TODO - move in TypeReverser
+
     log.info('[+] For new reversed type, fix their definitive fields.')
     for revStructType in heap_context.list_reversed_types():
         revStructType.makeFields(heap_context)
 
-    # poitners not in the heap
+    # TODO - move in TypeReverser
+    # poitners not in the heapv
     # for s in context.listStructures():
     #  for f in s.getPointerFields():
     #    if ctypes.is_void_pointer_type(f.getCtype()):
@@ -625,7 +715,8 @@ def makeGroupSignature(context, sizeCache):
         pass
     return context, sgms
 
-# FIXME: 100 maybe is a bit short
+
+# FIXME - DELETE - already in TypeReverser._rename_similar_records
 try:
     import pkgutil
     _words = pkgutil.get_data(__name__, config.WORDS_FOR_REVERSE_TYPES_FILE)
@@ -635,31 +726,27 @@ except ImportError:
         __name__,
         config.WORDS_FOR_REVERSE_TYPES_FILE)
 
-# global
+# FIXME - DELETE - already in TypeReverser._rename_similar_records
 _NAMES = [s.strip() for s in _words.split(b'\n')[:-1]]
 _NAMES_plen = 1
 
 
 def getname():
+    # FIXME - DELETE - already in TypeReverser._rename_similar_records
+
     global _NAMES, _NAMES_plen
     if len(_NAMES) == 0:
         _NAMES_plen += 1
-        _NAMES = [
-            ''.join(x) for x in itertools.permutations(
-                _words.split('\n')[
-                    :-
-                    1],
-                _NAMES_plen)]
+        _NAMES = [''.join(x) for x in itertools.permutations(_words.split('\n')[:-1], _NAMES_plen)]
     return _NAMES.pop()
 
 
 def fixType(context, chains):
     ''' Fix the name of each structure to a generic word/type name '''
+    # FIXME - DELETE - already in TypeReverser._rename_similar_records
     for chain in chains:
         name = getname()
-        log.debug(
-            '\t[-] fix type of chain size:%d with name name:%s' %
-            (len(chain), name))
+        log.debug('\t[-] fix type of chain size:%d with name name:%s' % (len(chain), name))
         for addr in chain:  # chain is a numpy
             addr = int(addr)
             # FIXME
@@ -670,6 +757,7 @@ def fixType(context, chains):
 
 
 def fixInstanceType(context, instance, name):
+    # FIXME - DELETE - already in TypeReverser._rename_similar_records
     # TODO if instance.isFixed, return instance.getCtype()
     instance.name = name
     ctypes_type = context.get_reversed_type(name)

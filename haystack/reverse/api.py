@@ -90,6 +90,14 @@ def reverse_instances(memory_handler):
     """
     Reverse all heaps in process from memory_handler
 
+    1. dsa.FieldReverser
+    2. dsa.TextFieldCorrection
+    3. reversers.DoubleLinkedListReverser
+    4. pointertypes.PointerFieldReverser
+    5. save
+    6. reversers.PointerGraphReverser
+    7. reversers.StringsReverser
+
     :param memory_handler:
     :return:
     """
