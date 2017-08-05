@@ -133,14 +133,16 @@ class TypeReverser(model.AbstractReverser):
                 raise RuntimeError("Duplicate reversed type name. Clean cache?")
             # FIXME : actually choose the best reference type by checking connectivity in graph ?
             reference_type = heap_context.get_record_for_address(chain[0]).record_type
-            # FIXME: create a index of instance for each reference_type. (why ?)
+            reference_type.type_name = name
+            # FIXME: 2b create a index of instance for each reference_type. (why ?)
             process_context.add_reversed_type(name, reference_type)
             for addr in chain:  # chain is a list of addresses
                 instance = heap_context.get_record_for_address(addr)
                 instance.name = name
                 # we change the record type
                 instance.set_record_type(reference_type)
-                ctypes_type.add_instance(instance)
+                ## 2b we probably dont need an index of record types
+                # ctypes_type.add_instance(instance)
         return
 
     def persist(self, _context):

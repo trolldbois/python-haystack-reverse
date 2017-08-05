@@ -11,6 +11,7 @@ import pickle
 import time
 import numpy
 import os
+import collections
 
 from haystack.abc import interfaces
 from haystack.outputters import text
@@ -172,27 +173,38 @@ class ProcessContext(object):
         #
         nb_total = 0
         nb_unique = 0
-        text_output = text.RecursiveTextOutputter(self.memory_handler)
-        for nb_unique, r_type_name in enumerate(self.list_reversed_types()):
+        all_records_types = collections.defaultdict(list)
+        # FIXME Dirty
+        for ctx in self.list_contextes():
+            for record in ctx.listStructures():
+                all_records_types[record.record_type.type_name].append(record.address)
+        # get a size ordered list
+        reversed_types = []
+        for r_type_name in self.list_reversed_types():
             # get the address of the instances for that reversed type.
-            record_type = self.get_reversed_type(r_type)
-            # we want the addresses
-            members_addresses = list(ctype_decl.get_instances().keys())
+            record_type = self.get_reversed_type(r_type_name)
+            size = record_type.size
+            reversed_types.append((size, r_type_name, record_type))
+        reversed_types.sort()
+        #
+        for size, r_type_name, record_type in reversed_types:
+            # we want the addresses of the instances
+            # FIXME dirty
+            members_addresses = all_records_types[record_type.type_name]
             nb_total += len(members_addresses)
             # FIXME : extract from here to main reverse loop / type reversers
             from haystack.reverse.heuristics import constraints
             rev = constraints.ConstraintsReverser(self.memory_handler)
-            txt = rev.verify(r_type, members_addresses)
+            txt = rev.verify(r_type_name, members_addresses)
             towrite.extend(txt)
             towrite.append("# %d members" % len(members_addresses))
             # towrite.append(text_output.parse(ctype_decl))
-            ctype_decl.make_fields()
-            towrite.append(ctype_decl().to_string())
+            towrite.append(record_type.to_string())
             if len(towrite) >= 10000:
                 try:
                     fout.write('\n'.join(towrite))
                 except UnicodeDecodeError as e:
-                    print('ERROR on ', r_type)
+                    print('ERROR on ', record_type)
                 towrite = []
                 fout.flush()
         # add some stats
