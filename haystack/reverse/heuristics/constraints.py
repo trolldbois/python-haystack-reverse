@@ -41,6 +41,8 @@ class ConstraintsReverser(object):
         _context = self.__process_context.get_context_for_address(ref_addr)
         _item = _context.get_record_for_address(ref_addr)
         _record_type = _item.record_type
+        lines.append('# size: %d' % _record_type.size)
+        lines.append('# signature: %s' % _record_type.signature_text)
         # try to apply the fields template to all members of the list
         for list_item_addr in members_addresses:
             _context = self.__process_context.get_context_for_address(list_item_addr)

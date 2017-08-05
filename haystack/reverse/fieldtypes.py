@@ -126,7 +126,12 @@ class RecordType(object):
 
     @property
     def signature(self):
-        return ''.join([f.signature for f in self.get_fields()])
+        # return ''.join([f.signature for f in self.get_fields()])
+        return [f.signature for f in self.get_fields()]
+
+    @property
+    def signature_text(self):
+        return ''.join(['%s%d' % (f.signature[0], f.signature[1]) for f in self.get_fields()])
 
     @property
     def size(self):

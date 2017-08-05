@@ -192,7 +192,7 @@ class ProcessContext(object):
             # FIXME dirty
             members_addresses = all_records_types[record_type.type_name]
             nb_total += len(members_addresses)
-            # FIXME : extract from here to main reverse loop / type reversers
+            # FIXME : extract from here to main reverse loop / signature type reversers
             from haystack.reverse.heuristics import constraints
             rev = constraints.ConstraintsReverser(self.memory_handler)
             txt = rev.verify(r_type_name, members_addresses)

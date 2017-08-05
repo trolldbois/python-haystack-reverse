@@ -476,10 +476,12 @@ class %s(%s):  # %s
         return 'struct_%x' % self.__address
 
     def get_signature_text(self):
-        return ''.join(['%s%d' % (f.signature[0], f.signature[1]) for f in self.record_type.get_fields()])
+        # return ''.join(['%s%d' % (f.signature[0], f.signature[1]) for f in self.record_type.get_fields()])
+        return self.record_type.signature_text
 
     def get_signature(self):
-        return [f.signature for f in self.record_type.get_fields()]
+        # return [f.signature for f in self.record_type.get_fields()]
+        return self.record_type.signature
 
     def get_type_signature_text(self):
         return ''.join([f.signature[0].upper() for f in self.record_type.get_fields()])
@@ -594,7 +596,7 @@ class FieldInstance(object):
         # call the .value property instead
         my_bytes = self.__get_value_for_field_inner(max_len)
         if isinstance(my_bytes, str):
-            bl = len(str(my_bytes))
+            bl = len(my_bytes)
             if bl >= max_len:
                 my_bytes = my_bytes[:max_len // 2] + '...' + \
                     my_bytes[-(max_len // 2):]  # idlike to see the end
@@ -611,12 +613,13 @@ class FieldInstance(object):
         if self._field_decl.is_string():
             if _type == fieldtypes.STRING16:
                 try:
-                    my_bytes = "%s" % (repr(self._parent.bytes[_offset:_offset + _size].decode('utf-16')))
+                    # my_bytes = "%s" % (repr(self._parent.bytes[_offset:_offset + _size].decode('utf-16')))
+                    my_bytes = "%s" % self._parent.bytes[_offset:_offset + _size].decode('utf-16')
                 except UnicodeDecodeError as e:
                     log.error('ERROR ON : %s', repr(self._parent.bytes[_offset:_offset + _size]))
                     my_bytes = self._parent.bytes[_offset:_offset + _size]
             else:
-                my_bytes = "'%s'" % (self._parent.bytes[_offset:_offset + _size])
+                my_bytes = "%s" % (self._parent.bytes[_offset:_offset + _size])
         elif self._field_decl.is_integer():
             # what about endianness ?
             endianess = '<' # FIXME dsa self.endianess
@@ -624,7 +627,7 @@ class FieldInstance(object):
             val = self._parent.target.get_target_ctypes_utils().unpackWord(data, endianess)
             return val
         elif self._field_decl.is_zeroes():
-            my_bytes = repr('\\x00'*_size)
+            my_bytes = '\\x00'*_size
         elif self._field_decl.is_array():
             my_bytes = self._parent.bytes[_offset:_offset + _size]
         elif self._field_decl.padding or _type == fieldtypes.UNKNOWN:
