@@ -7,9 +7,10 @@ import logging
 import time
 
 from haystack.abc import interfaces as hi
-from haystack.reverse.heuristics import interfaces as hri
-from haystack.reverse import context
 
+from haystack.reverse import config
+from haystack.reverse import context
+from haystack.reverse.heuristics import interfaces as hri
 
 log = logging.getLogger('model')
 
@@ -30,8 +31,6 @@ class AbstractReverser(hri.IReverser):
         self._word_size = self._target.get_word_size()
         # metadata
         self._t0 = self._t1 = self._nb_reversed = self._nb_from_cache = 0
-        self._fout = None
-        self._towrite = None
 
     def get_reverse_level(self):
         return self._reverse_level
@@ -142,20 +141,39 @@ class AbstractReverser(hri.IReverser):
 
 class WriteRecordToFile(AbstractReverser):
 
+    REVERSE_LEVEL = -1
+
+    def __init__(self, memory_handler, basename):
+        super(WriteRecordToFile, self).__init__(memory_handler)
+        self.basename = basename
+
+    def get_filename_for_context(self, _context):
+        dumpname = self._memory_handler.get_name()
+        _heap_start = _context._heap_start
+        return config.get_cache_filename(self.basename, dumpname, _heap_start)
+
     def reverse_context(self, _context):
-        self._fout = open(_context.get_filename_cache_headers(), 'w')
+        self._fout = open(self.get_filename_for_context(_context), 'w')
         self._towrite = []
         super(WriteRecordToFile, self).reverse_context(_context)
         self._write()
         self._fout.close()
 
+    def _iterate_records(self, _context):
+        """ Always parse all records. Dont ignore because of REVERSE_LEVEL """
+        for _record in _context.listStructures():
+            yield _record
+
     def reverse_record(self, _context, _record):
         super(WriteRecordToFile, self).reverse_record(_context, _record)
         # output headers
         self._towrite.append(_record.to_string())
+        # save structure to cache
+        _record.saveme(_context)
 
     def _write(self):
         self._fout.write('\n'.join(self._towrite))
+        self._fout.flush()
         self._towrite = []
         pass
 

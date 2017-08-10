@@ -39,9 +39,10 @@ class TypeReverser(model.AbstractReverser):
 
     Abstract Reverser, that do not go to the record level (except to get a signature).
 
-    1. Look at all structures type signatures.
-    2. Compare all signatures together (Levensthein)
-    3. group similar structures together, in a graph
+    1. Look at all record type signatures.
+    2. Compare all signatures together using Levenshtein
+    3. Group records with similar signature together, in a graph
+    4. Rename record types for similar records
 
     """
     REVERSE_LEVEL = 300
@@ -68,6 +69,7 @@ class TypeReverser(model.AbstractReverser):
         signatures = self._gather_signatures(_context)
         similarities = self._chain_similarities(signatures)
         self._rename_similar_records(self._memory_handler.get_reverse_context(), _context, similarities)
+        # just tag the records
         for _record in _context.listStructures():
             self.reverse_record(_context, _record)
         _context.save()
@@ -128,22 +130,16 @@ class TypeReverser(model.AbstractReverser):
         for chain in chains:
             name = self._make_original_type_name()
             log.debug('\t[-] fix type of chain size:%d with name:%s %s' % (len(chain), name, chain))
-            # we assume there is no similar name.
-            if process_context.get_reversed_type(name) is not None:
-                raise RuntimeError("Duplicate reversed type name. Clean cache?")
             # FIXME : actually choose the best reference type by checking connectivity in graph ?
             reference_type = heap_context.get_record_for_address(chain[0]).record_type
             reference_type.type_name = name
-            # FIXME: 2b create a index of instance for each reference_type. (why ?)
-            process_context.add_reversed_type(name, reference_type)
             for addr in chain:  # chain is a list of addresses
                 instance = heap_context.get_record_for_address(addr)
                 instance.name = name
-                # we change the record type
+                # we change the record type on all instance
                 instance.set_record_type(reference_type)
-                ## 2b we probably dont need an index of record types
-                # ctypes_type.add_instance(instance)
         return
+
 
     def persist(self, _context):
         # FIXME: why save signatures ?

@@ -2,27 +2,24 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-from past.builtins import long
-from builtins import map
 
 import logging
+import os
 import pickle
 # import dill as pickle
 import time
+
 import numpy
-import os
-import collections
-
+from builtins import map
 from haystack.abc import interfaces
-from haystack.outputters import text
+from past.builtins import long
 
-from haystack.reverse import utils
 from haystack.reverse import config
-from haystack.reverse import structure
-from haystack.reverse import searchers
-from haystack.reverse import matchers
 from haystack.reverse import enumerators
-
+from haystack.reverse import matchers
+from haystack.reverse import searchers
+from haystack.reverse import structure
+from haystack.reverse import utils
 
 log = logging.getLogger('context')
 
@@ -139,79 +136,6 @@ class ProcessContext(object):
     def list_contextes(self):
         """Returns all known HeapContext"""
         return self.__contextes.values()
-
-    def get_reversed_type(self, typename):
-        """Returns the list of address of records for that typename"""
-        if typename in self.__reversed_types:
-            return self.__reversed_types[typename]
-        return None
-
-    def add_reversed_type(self, typename, t):
-        """Add an instance address for this reversed typename.
-        Called by :
-        - ReversedType.create (static) when creating a new reversed type.
-            ( only used in uncalled code in signature.py )
-        - DoubleLinkedListReverser
-        - ConstraintsReverser - activate() - Unused ??
-        """
-        self.__reversed_types[typename] = t
-
-    def list_reversed_types(self):
-        """List all names of reversed types"""
-        return self.__reversed_types.keys()
-
-    # def _load_reversed_types(self):
-    #     self.__reversed_types = pickle.load()
-
-    def save_reversed_types(self):
-        """
-        Save the python class code definition to file.
-        """
-        fout = open(self.get_filename_cache_headers(), 'w')
-        towrite = ['# This file contains record types deduplicated by instance',
-                   '# Unique values for each field of the record are listed']
-        #
-        nb_total = 0
-        nb_unique = 0
-        all_records_types = collections.defaultdict(list)
-        # FIXME Dirty
-        for ctx in self.list_contextes():
-            for record in ctx.listStructures():
-                all_records_types[record.record_type.type_name].append(record.address)
-        # get a size ordered list
-        reversed_types = []
-        for r_type_name in self.list_reversed_types():
-            # get the address of the instances for that reversed type.
-            record_type = self.get_reversed_type(r_type_name)
-            size = record_type.size
-            reversed_types.append((size, r_type_name, record_type))
-        reversed_types.sort()
-        #
-        for size, r_type_name, record_type in reversed_types:
-            # we want the addresses of the instances
-            # FIXME dirty
-            members_addresses = all_records_types[record_type.type_name]
-            nb_total += len(members_addresses)
-            # FIXME : extract from here to main reverse loop / signature type reversers
-            from haystack.reverse.heuristics import constraints
-            rev = constraints.ConstraintsReverser(self.memory_handler)
-            txt = rev.verify(r_type_name, members_addresses)
-            towrite.extend(txt)
-            towrite.append("# %d members" % len(members_addresses))
-            # towrite.append(text_output.parse(ctype_decl))
-            towrite.append(record_type.to_string())
-            if len(towrite) >= 10000:
-                try:
-                    fout.write('\n'.join(towrite))
-                except UnicodeDecodeError as e:
-                    print('ERROR on ', record_type)
-                towrite = []
-                fout.flush()
-        # add some stats
-        towrite.insert(2, '# Stats: unique_types:%d total_instances:%d' % (nb_unique, nb_total))
-        fout.write('\n'.join(towrite))
-        fout.close()
-        return
 
     def _load_graph_cache(self):
         from haystack.reverse.heuristics import reversers

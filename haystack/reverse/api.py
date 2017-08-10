@@ -10,39 +10,10 @@ from haystack.reverse.heuristics import reversers
 from haystack.reverse.heuristics import dsa
 from haystack.reverse.heuristics import pointertypes
 from haystack.reverse.heuristics import signature
+from haystack.reverse.heuristics import constraints
+from haystack.reverse.heuristics import model
 
 log = logging.getLogger('reverse.api')
-
-
-def save_headers(heap_context, addrs=None):
-    """
-    Save the python class code definition to file.
-
-    :param heap_context:
-    :param addrs:
-    :return:
-    """
-    # structs_addrs is sorted
-    log.info('[+] saving headers')
-    fout = open(heap_context.get_filename_cache_headers(), 'w')
-    towrite = []
-    if addrs is None:
-        addrs = iter(heap_context.listStructuresAddresses())
-    #
-    for vaddr in addrs:
-        # anon = context._get_structures()[vaddr]
-        anon = heap_context.get_record_for_address(vaddr)
-        towrite.append(anon.to_string())
-        if len(towrite) >= 10000:
-            try:
-                fout.write('\n'.join(towrite))
-            except UnicodeDecodeError as e:
-                print('ERROR on ', anon)
-            towrite = []
-            fout.flush()
-    fout.write('\n'.join(towrite))
-    fout.close()
-    return
 
 
 def reverse_heap(memory_handler, heap_addr):
@@ -74,7 +45,8 @@ def reverse_heap(memory_handler, heap_addr):
         doublelink.rename_all_lists()
 
         # save to file
-        save_headers(heap_context)
+        file_writer = model.WriteRecordToFile(memory_handler)
+        file_writer.reverse_context(heap_context)
 
         # etc
     except KeyboardInterrupt as e:
@@ -129,19 +101,25 @@ def reverse_instances(memory_handler):
     pfr = pointertypes.PointerFieldReverser(memory_handler)
     pfr.reverse()
 
+    # save that
+    log.info('Saving reversed records instances')
+    file_writer = model.WriteRecordToFile(memory_handler, basename='instances.py')
+    file_writer.reverse()
+
     # then we try to match similar record type together
+    log.info('Grouping records with a similar signature')
     sig_type_rev = signature.TypeReverser(memory_handler)
     sig_type_rev.reverse()
 
     # save that
-    log.info('Saving reversed records instances')
-    for heap_context in process_context.list_contextes():
-        heap_context.save_structures()
-        # save to file
-        save_headers(heap_context)
+    log.info('Saving reversed records instances with signature')
+    file_writer = model.WriteRecordToFile(memory_handler, basename='instances_with_sig.py')
+    file_writer.reverse()
 
+    # then we gather the value space of fields for each record, grouped by similar signature
     log.info('Saving reversed records types')
-    process_context.save_reversed_types()
+    fvrr = constraints.FieldValueRangeReverser(memory_handler, output_to_file=True)
+    fvrr.reverse()
 
     # graph pointer relations between allocators
     log.info('Reversing PointerGraph')
