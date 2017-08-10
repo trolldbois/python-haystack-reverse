@@ -51,18 +51,13 @@ class TestTypeReverser(unittest.TestCase):
         _record = _context.get_record_for_address(address)
         print("Before:")
         print(_record.to_string())
+        self.assertEqual(_record.name, "struct_ccd00")
         rev.reverse_context(_context)
         _record = _context.get_record_for_address(address)
         print("After:")
         print(_record.to_string())
-
-        name_root = _record.name.split('_')[0]
-        process_context = self.memory_handler.get_reverse_context()
-        brothers_type = process_context.get_reversed_type(name_root)
-        instances = brothers_type.get_instances()
-        print("Brothers:")
-        for addr, bro in instances.items():
-            print(bro.to_string())
+        self.assertEqual(_record.name, "mewingrazzes_ccd00")
+        # TODO FIX LIST_ENTRY type
         pass
 
     def test_otherlink(self):
@@ -77,7 +72,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)
     # logging.getLogger("reversers").setLevel(logging.DEBUG)
     # logging.getLogger("reversers").setLevel(logging.DEBUG)
-    logging.getLogger("signature").setLevel(logging.DEBUG)
+    # logging.getLogger("signature").setLevel(logging.DEBUG)
     # logging.getLogger("test_reversers").setLevel(logging.DEBUG)
     # logging.getLogger("structure").setLevel(logging.DEBUG)
     # logging.getLogger("dsa").setLevel(logging.DEBUG)

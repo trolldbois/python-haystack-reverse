@@ -127,6 +127,9 @@ class TypeReverser(model.AbstractReverser):
 
     def _rename_similar_records(self, process_context, heap_context, chains):
         """ Fix the name of each structure to a generic word/type name """
+        # order chains by size of records
+        # which produce nearly a stable resolution system.
+        chains.sort(key=lambda x: len(x))
         for chain in chains:
             name = self._make_original_type_name()
             log.debug('\t[-] fix type of chain size:%d with name:%s %s' % (len(chain), name, chain))
