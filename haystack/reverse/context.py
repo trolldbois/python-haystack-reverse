@@ -188,7 +188,6 @@ class HeapContext(object):
         self._heap_start = walker.get_heap_address()
         self._function_names = dict()
         # refresh heap pointers list and allocators chunks
-        self._reversedTypes = dict()
         self._structures = None
         self._init2()
         return

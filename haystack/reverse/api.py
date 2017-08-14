@@ -45,7 +45,7 @@ def reverse_heap(memory_handler, heap_addr):
         doublelink.rename_all_lists()
 
         # save to file
-        file_writer = model.WriteRecordToFile(memory_handler)
+        file_writer = model.WriteRecordToFile(memory_handler, 'reversed.py')
         file_writer.reverse_context(heap_context)
 
         # etc

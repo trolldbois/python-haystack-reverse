@@ -60,13 +60,6 @@ class TestTypeReverser(unittest.TestCase):
         # TODO FIX LIST_ENTRY type
         pass
 
-    def test_otherlink(self):
-        # 0xa6f40, 0xa6f70
-        _record = self._context.get_record_for_address(0xccd00)
-        print(_record.to_string())
-        #import code
-        #code.interact(local=locals())
-
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO)

@@ -172,7 +172,7 @@ class WriteRecordToFile(AbstractReverser):
         _record.saveme(_context)
 
     def _write(self):
-        self._fout.write('\n'.join(self._towrite))
+        self._fout.write(b'\n'.join(self._towrite))
         self._fout.flush()
         self._towrite = []
         pass

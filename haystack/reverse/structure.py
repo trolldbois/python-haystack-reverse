@@ -500,7 +500,9 @@ class ReversedType(ctypes.Structure):
     """
     A reversed record type.
 
-    TODO: explain the usage.
+    TODO 2017-08-14: explain the usage.
+    What is the purpose.
+    Producing python code ?
 
     FIXME: oh very wrong:
     1. ctypes.Structure are not pickable
@@ -518,7 +520,6 @@ class ReversedType(ctypes.Structure):
             ctypes_type = type(name, (cls,), {'_instances': dict()})  # leave _fields_ out
             ctypes_mod = process_context.memory_handler.get_target_platform().get_target_ctypes()
             ctypes_type.ctypes = ctypes_mod
-            process_context.add_reversed_type(name, ctypes_type)
         return ctypes_type
 
     @classmethod
@@ -573,7 +574,6 @@ class %s(ctypes.Structure):  # %s
         return ctypes_def
 
 
-# FIXME  maybe instances field and record should have no name.
 # __str__ should combine type.name with @address
 class FieldInstance(object):
     """

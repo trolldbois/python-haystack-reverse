@@ -431,5 +431,5 @@ class RecordField(Field, RecordType):
 
     def to_string(self):
         comment = '# field struct %s' % self.type_name
-        fstr = "( '%s' , %s ), %s\n" % (self.name, self.get_typename(), comment)
+        fstr = "( '%s' , %s ), %s\n" % (self.name, self.type_name, comment)
         return fstr

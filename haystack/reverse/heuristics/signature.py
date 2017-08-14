@@ -2,26 +2,23 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
-import itertools
-import ctypes
-import logging
-import struct
 
+import itertools
+import logging
 import os
 import re
+import struct
+
 import Levenshtein  # seqmatcher ?
 import networkx
 import numpy
-
-from haystack.reverse import config
-import haystack.reverse.matchers
 from haystack.utils import xrange
+
+import haystack.reverse.matchers
+from haystack.reverse import config
 from haystack.reverse import searchers
 from haystack.reverse import utils
-from haystack.reverse import structure
-from haystack.reverse.heuristics import dsa
 from haystack.reverse.heuristics import model
-import time
 
 """
 Tools around guessing a field' type and
@@ -94,7 +91,6 @@ class TypeReverser(model.AbstractReverser):
         return signatures
 
     def _chain_similarities(self, signatures):
-        import Levenshtein
         similarities = []
         for i, (size1, addr1, el1) in enumerate(signatures[:-1]):
             log.debug("Comparing signatures with %s", el1)
@@ -144,24 +140,6 @@ class TypeReverser(model.AbstractReverser):
         return
 
 
-    def persist(self, _context):
-        # FIXME: why save signatures ?
-        outdir = _context.get_folder_cache()
-        config.create_cache_folder(outdir)
-        #
-        outname = _context.get_filename_cache_signatures()
-        #outname = os.path.sep.join([outdir, self._name])
-        ar = utils.int_array_save(outname, self._similarities)
-        return
-
-    def load(self, _context):
-        # FIXME: why save signatures ?
-        inname = _context.get_filename_cache_signatures()
-        self._similarities = utils.int_array_cache(inname)
-        return
-
-
-
 class CommonTypeReverser(model.AbstractReverser):
     """
     From a list of records addresse, find the most common signature.
@@ -207,84 +185,6 @@ class CommonTypeReverser(model.AbstractReverser):
         best_addr = self._signatures[best_sig][0]
         log.debug('best match %d/%d is %s: 0x%x', best_count, total, best_sig, best_addr)
         return best_sig, best_addr
-
-
-# TODO a Group maker based on field pointer memorymappings and structure
-# instance/sizes...
-
-
-class SignatureGroupMaker:
-    """
-    From a list of addresses, groups similar signature together.
-    HINT: structure should be resolved but not reverse-patternised for arrays...??
-    """
-
-    def __init__(self, context, name, addrs):
-        self._name = name
-        self._structures_addresses = addrs
-        self._context = context
-
-    def _init_signatures(self):
-        # get text signature for Counter to parse
-        # need to force resolve of allocators
-        self._signatures = []
-        # FIXME DELETE - OBSOLETE, now workflow is part of api.reverse
-        decoder = dsa.FieldReverser(self._context.memory_handler)
-        for addr in map(long, self._structures_addresses):
-            # decode the fields
-            record = self._context.get_record_for_address(addr)
-            ## record.decodeFields()  # can be long
-            decoder.analyze_fields(record)
-            # get the signature for the record
-            self._signatures.append((addr, self._context.get_record_for_address(addr).get_signature_text()))
-        return
-
-    def make(self):
-        self._init_signatures()
-        #
-        # FIXME DELETE - DUPLICATE, signature.TypeReverser
-        self._similarities = []
-        for i, x1 in enumerate(self._signatures[:-1]):
-            for x2 in self._signatures[i + 1:]:
-                addr1, el1 = x1
-                addr2, el2 = x2
-                lev = Levenshtein.ratio(el1, el2)  # seqmatcher ?
-                if lev > 0.75:
-                    #self._similarities.append( ((addr1,el1),(addr2,el2)) )
-                    self._similarities.append((addr1, addr2))
-                    # we do not need the signature.
-        # check for chains
-        # TODO      we need a group maker with an iterator to push group
-        # proposition to the user
-        log.debug('\t[-] Signatures done.')
-        return
-
-    def persist(self):
-        outdir = config.get_cache_filename(
-            config.CACHE_SIGNATURE_GROUPS_DIR,
-            self._context.dumpname)
-        config.create_cache_folder(outdir)
-        #
-        outname = os.path.sep.join([outdir, self._name])
-        ar = utils.int_array_save(outname, self._similarities)
-        return
-
-    def isPersisted(self):
-        outdir = config.get_cache_filename(
-            config.CACHE_SIGNATURE_GROUPS_DIR,
-            self._context.dumpname)
-        return os.access(os.path.sep.join([outdir, self._name]), os.F_OK)
-
-    def load(self):
-        outdir = config.get_cache_filename(
-            config.CACHE_SIGNATURE_GROUPS_DIR,
-            self._context.dumpname)
-        inname = os.path.sep.join([outdir, self._name])
-        self._similarities = utils.int_array_cache(inname)
-        return
-
-    def getGroups(self):
-        return self._similarities
 
 
 class StructureSizeCache:
@@ -502,248 +402,3 @@ lib["phone"] = re.compile("0[-\d\s]{10,}")
 lib["ninumber"] = re.compile("[a-z]{2}\s?\d{2}\s?\d{2}\s?\d{2}\s?[a-z]",re.IGNORECASE)
 lib["isbn"] = re.compile("(?:[\d]-?){9}[\dxX]")
   '''
-
-
-def makeSizeCaches(dumpname):
-    ''' gets all allocators instances from the dump, order them by size.'''
-    from haystack.reverse import context
-    log.debug('\t[-] Loading the context for a dumpname.')
-    ctx = context.get_context(dumpname)
-    log.debug('\t[-] Make the size dictionnaries.')
-    sizeCache = StructureSizeCache(ctx)
-    sizeCache.cacheSizes()
-
-    return ctx, sizeCache
-
-
-def buildStructureGroup(context, sizeCache, optsize=None):
-    ''' Iterate of structure instances grouped by size, find similar signatures,
-    and outputs a list of groups of similar allocators instances.'''
-    # FIXME DELETE - OBSOLETE, function now in TypeReverser._chain_similarities
-    log.debug("\t[-] Group allocators's signatures by sizes.")
-    sgms = []
-    #
-    for size, lst in sizeCache:
-        if optsize is not None:
-            if size != optsize:
-                continue  # ignore different size
-        log.debug("\t[-] Group signatures for allocators of size %d" % size)
-        sgm = SignatureGroupMaker(context, 'structs.%x' % size, lst)
-        if sgm.isPersisted():
-            sgm.load()
-        else:
-            sgm.make()
-            sgm.persist()
-        sgms.append(sgm)
-
-        # TODO DEBUG
-        # if len(lst) >100:
-        #  log.error('too big a list, DELETE THIS ')
-        #  continue
-        #  #return
-
-        # make a chain and use --originAddr
-        log.debug(
-            '\t[-] Sort %d structs of size %d in groups' %
-            (len(lst), size))
-        graph = networkx.Graph()
-        # add similarities as linked structs
-        graph.add_edges_from(sgm.getGroups())
-        # add all structs all nodes . Should spwan isolated graphs
-        graph.add_nodes_from(lst)
-        subgraphs = networkx.algorithms.components.connected.connected_component_subgraphs(
-            graph)
-        # print 'subgraphs', len(subgraphs)
-        chains = [g.nodes() for g in subgraphs]
-        # TODO, do not forget this does only gives out structs with similarities.
-        # lonely structs are not printed here...
-        yield chains
-
-
-def printStructureGroups(context, chains, originAddr=None):
-    chains.sort()
-    decoder = dsa.FieldReverser(context.memory_handler)
-    for chain in chains:
-        log.debug('\t[-] chain len:%d' % len(chain))
-        if originAddr is not None:
-            if originAddr not in chain:
-                continue  # ignore chain if originAddr is not in it
-        for addr in map(long, chain):
-            record = context.get_record_for_address(addr)
-            ##record.decodeFields()  # can be long
-            decoder.analyze_fields(record)
-            print(context.get_record_for_address(addr).to_string())
-        print('#', '-' * 78)
-
-
-def graphStructureGroups(context, chains, originAddr=None):
-    # TODO change generic fn
-    chains.sort()
-    decoder = dsa.FieldReverser(context.memory_handler)
-    graph = networkx.DiGraph()
-    for chain in chains:
-        log.debug('\t[-] chain len:%d' % len(chain))
-        if originAddr is not None:
-            if originAddr not in chain:
-                continue  # ignore chain if originAddr is not in it
-        for addr in map(long, chain):
-            record = context.get_record_for_address(addr)
-            ## record.decodeFields()  # can be long
-            decoder.analyze_fields(record)
-            print(context.get_record_for_address(addr).to_string())
-            targets = set()
-            _record = context.get_record_for_address(addr)
-            pointer_fields = [f for f in _record.get_fields() if f.is_pointer()]
-            for f in pointer_fields:
-                addr_child = f.get_value_for_field(_record)
-                child = context.get_record_at_address(addr)
-                targets.add(('%x' % addr, '%x' % child.address))
-            graph.add_edges_from(targets)
-        print('#', '-' * 78)
-    networkx.readwrite.gexf.write_gexf(
-        graph,
-        config.get_cache_filename(
-            config.CACHE_GRAPH,
-            context.dumpname))
-
-
-
-# FIXME MOVE TO ongoing TypeReverser
-# TODO next next step, compare struct links in a DiGraph with node ==
-# struct size + pointer index as a field.
-def makeReversedTypes(heap_context, sizeCache):
-    ''' Compare signatures for each size groups.
-    Makes a chains out of similar allocators. Changes the structure names for a single
-    typename when possible. Changes the ctypes types of each pointer field.'''
-
-    log.info('[+] Build groups of similar instances, create a reversed type for each group.')
-    # FIXME - DELETE - already in TypeReverser._rename_similar_records
-    for chains in buildStructureGroup(heap_context, sizeCache):
-        fixType(heap_context, chains)
-
-    # TODO - move in TypeReverser
-    log.info('[+] For each instances, fix pointers fields to newly created types.')
-    decoder = dsa.FieldReverser(heap_context.memory_handler)
-    for s in heap_context.listStructures():
-        s.reset()
-        ## s.decodeFields()
-        decoder.reverse_record(heap_context, s)
-        pointer_fields = [f for f in s.get_fields() if f.is_pointer()]
-        for f in pointer_fields:
-            addr = f.get_value_for_field(s)
-            if addr in heap_context.heap:
-                try:
-                    ctypes_type = heap_context.get_record_at_address(
-                        addr).get_ctype()
-                # we have escapees, withouth a typed type... saved them from
-                # exception
-                except TypeError as e:
-                    ctypes_type = fixInstanceType(
-                        heap_context,
-                        heap_context.get_record_at_address(addr),
-                        getname())
-                #f.setCtype(ctypes.POINTER(ctypes_type))
-                f.set_pointee_ctype(ctypes.POINTER(ctypes_type))
-                f.set_comment('pointer fixed')
-
-    # TODO - move in TypeReverser
-
-    log.info('[+] For new reversed type, fix their definitive fields.')
-    for revStructType in heap_context.list_reversed_types():
-        revStructType.make_fields(heap_context)
-
-    # TODO - move in TypeReverser
-    # poitners not in the heapv
-    # for s in context.listStructures():
-    #  for f in s.getPointerFields():
-    #    if ctypes.is_void_pointer_type(f.getCtype()):
-    #      print s,'has a c_void_p field', f._getValue(0),
-    #      print context.getStructureForOffset( f._getValue(0) )
-
-    return heap_context
-
-
-def makeSignatures(dumpname):
-    from haystack.reverse import context
-    log.debug('\t[-] Loading the context for a dumpname.')
-    ctx = context.get_context(dumpname)
-    heap = ctx.heap
-
-    log.info('[+] Make the signatures.')
-    sigMaker = SignatureMaker(heap)
-    sig = sigMaker.search()
-    return ctx, sig
-
-
-def makeGroupSignature(context, sizeCache):
-    ''' From the allocators cache ordered by size, group similar instances together. '''
-    log.info("[+] Group allocators's signatures by sizes.")
-    sgms = []
-    try:
-        for size, lst in sizeCache:
-            log.debug(
-                "[+] Group signatures for allocators of size %d" %
-                size)
-            sgm = SignatureGroupMaker(context, 'structs.%x' % size, lst)
-            sgm.make()
-            sgm.persist()
-            sgms.append(sgm)
-    except KeyboardInterrupt as e:
-        pass
-    return context, sgms
-
-
-# FIXME - DELETE - already in TypeReverser._rename_similar_records
-try:
-    import pkgutil
-    _words = pkgutil.get_data(__name__, config.WORDS_FOR_REVERSE_TYPES_FILE)
-except ImportError:
-    import pkg_resources
-    _words = pkg_resources.resource_string(
-        __name__,
-        config.WORDS_FOR_REVERSE_TYPES_FILE)
-
-# FIXME - DELETE - already in TypeReverser._rename_similar_records
-_NAMES = [s.strip() for s in _words.split(b'\n')[:-1]]
-_NAMES_plen = 1
-
-
-def getname():
-    # FIXME - DELETE - already in TypeReverser._rename_similar_records
-
-    global _NAMES, _NAMES_plen
-    if len(_NAMES) == 0:
-        _NAMES_plen += 1
-        _NAMES = [''.join(x) for x in itertools.permutations(_words.split('\n')[:-1], _NAMES_plen)]
-    return _NAMES.pop()
-
-
-def fixType(context, chains):
-    ''' Fix the name of each structure to a generic word/type name '''
-    # FIXME - DELETE - already in TypeReverser._rename_similar_records
-    for chain in chains:
-        name = getname()
-        log.debug('\t[-] fix type of chain size:%d with name name:%s' % (len(chain), name))
-        for addr in chain:  # chain is a numpy
-            addr = int(addr)
-            # FIXME
-            instance = context.get_record_for_address(addr)
-            #
-            ctypes_type = fixInstanceType(context, instance, name)
-    return
-
-
-def fixInstanceType(context, instance, name):
-    # FIXME - DELETE - already in TypeReverser._rename_similar_records
-    # TODO if instance.isFixed, return instance.getCtype()
-    instance.name = name
-    ctypes_type = context.get_reversed_type(name)
-    if ctypes_type is None:  # make type
-        ctypes_type = structure.ReversedType.create(context, name)
-    ctypes_type.add_instance(instance)
-    instance.set_ctype(ctypes_type)
-    return ctypes_type
-
-
-if __name__ == '__main__':
-    pass
