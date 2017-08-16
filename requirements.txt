@@ -5,3 +5,4 @@ numpy
 python-Levenshtein
 six==1.10.0
 matplotlib
+pygraphviz
