@@ -1,17 +1,19 @@
+import collections
+import logging
 import os
 import time
-import collections
 
-from reverse import config
-from reverse import context
-from reverse.heuristics import model
-from reverse.heuristics.reversers import log
-from haystack.reverse import utils
-
+import matplotlib.pyplot as plt
 import networkx
 from networkx.drawing.nx_agraph import graphviz_layout
-import matplotlib.pyplot as plt
 
+from haystack.reverse import config
+from haystack.reverse import context
+from haystack.reverse import utils
+from haystack.reverse.heuristics import model
+from haystack.reverse.heuristics.reversers import log
+
+log = logging.getLogger("graph")
 
 class PointerGraphReverser(model.AbstractReverser):
     """
@@ -61,7 +63,7 @@ class PointerGraphReverser(model.AbstractReverser):
         # save the whole graph
         networkx.readwrite.gexf.write_gexf(self._graph, _context.get_filename_cache_graph())
         # save the graph pruned of less connected nodes
-        self.clean_graph(self._graph)
+        self.clean_graph(_context, self._graph)
         networkx.readwrite.gexf.write_gexf(self._graph, _context.get_filename_cache_graph_connected())
         # save a PNG of that
         self.print_graph(self._graph, _context.get_filename_cache_graph_png())

@@ -1,19 +1,20 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
+
 import logging
 
 from haystack.abc import interfaces
 
-import reverse.heuristics.graph
 from haystack.reverse import config
 from haystack.reverse import context
-from haystack.reverse.heuristics import reversers
-from haystack.reverse.heuristics import dsa
-from haystack.reverse.heuristics import pointertypes
-from haystack.reverse.heuristics import signature
 from haystack.reverse.heuristics import constraints
+from haystack.reverse.heuristics import dsa
+from haystack.reverse.heuristics import graph
 from haystack.reverse.heuristics import model
+from haystack.reverse.heuristics import pointertypes
+from haystack.reverse.heuristics import reversers
+from haystack.reverse.heuristics import signature
 
 log = logging.getLogger('reverse.api')
 
@@ -78,29 +79,26 @@ def reverse_instances(memory_handler):
     """
     assert isinstance(memory_handler, interfaces.IMemoryHandler)
     process_context = memory_handler.get_reverse_context()
-    #for heap in heaps:
-    #    # reverse all fields in all records from that heap
-    #    ## reverse_heap(memory_handler, heap_addr)
 
     log.info('Reversing Fields')
-    fr = dsa.FieldReverser(memory_handler)
+    fr = dsa.FieldReverser(memory_handler)  # 10
     fr.reverse()
 
     log.info('Fixing Text Fields')
-    tfc = dsa.TextFieldCorrection(memory_handler)
+    tfc = dsa.TextFieldCorrection(memory_handler)  # 11
     tfc.reverse()
 
     # try to find some logical constructs.
     log.info('Reversing DoubleLinkedListReverser')
     # why is this a reverse_context ?
-    doublelink = reversers.DoubleLinkedListReverser(memory_handler)
+    doublelink = reversers.DoubleLinkedListReverser(memory_handler)  # 30
     doublelink.reverse()
     doublelink.rename_all_lists()
 
     # then and only then can we look at the PointerFields
     # identify pointer relation between allocators
     log.info('Reversing PointerFields')
-    pfr = pointertypes.PointerFieldReverser(memory_handler)
+    pfr = pointertypes.PointerFieldReverser(memory_handler)  # 50
     pfr.reverse()
 
     # save that
@@ -110,7 +108,7 @@ def reverse_instances(memory_handler):
 
     # then we try to match similar record type together
     log.info('Grouping records with a similar signature')
-    sig_type_rev = signature.TypeReverser(memory_handler)
+    sig_type_rev = signature.TypeReverser(memory_handler)  # 300
     sig_type_rev.reverse()
 
     # save that
@@ -120,17 +118,17 @@ def reverse_instances(memory_handler):
 
     # then we gather the value space of fields for each record, grouped by similar signature
     log.info('Saving reversed records types')
-    fvrr = constraints.FieldValueRangeReverser(memory_handler, output_to_file=True)
+    fvrr = constraints.FieldValueRangeReverser(memory_handler, output_to_file=True)  # 350
     fvrr.reverse()
 
     # graph pointer relations between allocators
     log.info('Reversing PointerGraph')
-    ptrgraph = reverse.heuristics.graph.PointerGraphReverser(memory_handler)
+    ptrgraph = graph.PointerGraphReverser(memory_handler)  # 150
     ptrgraph.reverse()
 
     # extract all strings
     log.info('Reversing strings')
-    strout = reversers.StringsReverser(memory_handler)
+    strout = reversers.StringsReverser(memory_handler)  # 500
     strout.reverse()
 
     log.info('Analysis results are in %s', config.get_cache_folder_name(memory_handler.get_name()))

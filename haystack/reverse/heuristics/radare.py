@@ -9,6 +9,47 @@ import logging
 log = logging.getLogger('radare')
 
 
+# libdl hack
+# if self.memory_handler.get_target_platform().get_os_name() not in ['winxp', 'win7']:
+#    log.info('[+] Reversing function pointers names')
+#    # TODO in reversers
+#    # dict(libdl.reverseLocalFonctionPointerNames(self) )
+#    self._function_names = dict()
+
+
+
+
+# def get_functions_pointers(self):
+#     try:
+#         return self.get_cache_radare()
+#     except IOError as e:
+#         return self.save_cache_radare()
+#
+# def get_cache_radare(self):
+#     dumpname = self.memory_handler.get_name()
+#     fname = config.get_cache_filename(config.CACHE_FUNCTION_NAMES, dumpname)
+#     functions = None
+#     try:
+#         with file(fname, 'r') as fin:
+#             functions = pickle.load(fin)
+#     except EOFError as e:
+#         os.remove(fname)
+#         log.error('Error in the radare cache file. File cleaned. Please restart.')
+#         raise RuntimeError('Error in the radare cache file. File cleaned. Please restart.')
+#     return functions
+#
+# def save_cache_radare(self):
+#     from haystack.reverse.heuristics import radare
+#     func = radare.RadareAnalysis(self.memory_handler)
+#     func.init_all_functions()
+#     import code
+#     code.interact(local=locals())
+#     dumpname = self.memory_handler.get_name()
+#     fname = config.get_cache_filename(config.CACHE_FUNCTION_NAMES, dumpname)
+#     with file(fname, 'w') as fout:
+#         pickle.dump(func.functions, fout)
+#     return func.functions
+
 class RadareAnalysis(object):
     """
     Use radare to get more info about non heaps

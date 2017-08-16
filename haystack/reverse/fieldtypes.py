@@ -300,7 +300,7 @@ class Field(object):
             raise TypeError('This is not reachable')
         else:
             # unknown
-            comment = '# %s else' % (self.comment )
+            comment = '# %s else' % self.comment
         # prep the string
         fstr = "( '%s' , %s ), %s\n" % (self.name, self.get_typename(), comment)
         return fstr
@@ -431,5 +431,8 @@ class RecordField(Field, RecordType):
 
     def to_string(self):
         comment = '# field struct %s' % self.type_name
-        fstr = "( '%s' , %s ), %s\n" % (self.name, self.type_name, comment)
+        fstr = "( '%s' , %s ), %s\n" % (self.name, self.get_typename(), comment)
         return fstr
+
+    def get_typename(self):
+        return self.__type_name

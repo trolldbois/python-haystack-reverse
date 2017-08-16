@@ -1,3 +1,10 @@
+Prio 1: use test ctypes for TU instead of pretty zeus and stuff.
+ensure reversers are actually doing their jobs
+
+
+Fix the Double pointer linked list reversers on a ctypes6 TU.
+    It does not capture head and tails with null pointers as same type.
+
 
 
 List of heuristics:
@@ -11,9 +18,9 @@ List of heuristics:
 - PointerGraphReverser: Create graph of records using pointer as edges
 - ArrayFieldsReverser: TODO
 - InlineRecordReverser: TODO (sub record type)
-- TypeReverser: TODO compare records signatures to match types.
+- TypeReverser: Done
 - CommonTypeReverser: Used by x2LinkedReverser to determine best types from a list of similar record
-- WriteRecordToFile: TODO save to file
+- WriteRecordToFile: done
 
 FIX the predecessors search. Most strings pointer in example are starting non-aligned <address> + 1.
 Because the size is on <address>
@@ -26,7 +33,7 @@ And maybe we need to reverse the aligned check on DSA FieldReverser, or create a
 1) integrate pattern and signature modules in the reverse API
 2) add a Reverser that takes and search for known records types. - Done
 
-# apply librairies structures/know structures search against heap before running anything else.
+# apply libraries structures/know structures search against heap before running anything else.
 # that should cut our reverse time way down
 # prioritize search per reverse struct size. limit to big struct and their graph.
 # then make a Named/Anonymous Struct out of them
@@ -131,13 +138,10 @@ Todo:
  - Add a struct beautifier for the string formatting. (hex vs int)
  - easy API
  - documented example
- - Rekall plugin
- - Rekall memorymap
  - make basicmodel:loadable members work with vtypes (vol/rekall) ?
  - Check why pdfbparse reports some gaps in structs gap_in_pdb_ofs_3C (HEAP)
  - pylint ignore W0212 in profiles.
  - add PyQt4 as dependency for optional functions
  - Add to ipython
- - Make reverse work againe
 
 

@@ -14,9 +14,9 @@ from builtins import map
 from haystack.abc import interfaces
 from past.builtins import long
 
-import reverse.heuristics.graph
 from haystack.reverse import config
 from haystack.reverse import enumerators
+from haystack.reverse.heuristics import graph
 from haystack.reverse import matchers
 from haystack.reverse import searchers
 from haystack.reverse import structure
@@ -42,37 +42,7 @@ class ProcessContext(object):
         # no need for that
         # create the cache folder then
         self.create_cache_folders()
-
-    # def get_functions_pointers(self):
-    #     try:
-    #         return self.get_cache_radare()
-    #     except IOError as e:
-    #         return self.save_cache_radare()
-    #
-    # def get_cache_radare(self):
-    #     dumpname = self.memory_handler.get_name()
-    #     fname = config.get_cache_filename(config.CACHE_FUNCTION_NAMES, dumpname)
-    #     functions = None
-    #     try:
-    #         with file(fname, 'r') as fin:
-    #             functions = pickle.load(fin)
-    #     except EOFError as e:
-    #         os.remove(fname)
-    #         log.error('Error in the radare cache file. File cleaned. Please restart.')
-    #         raise RuntimeError('Error in the radare cache file. File cleaned. Please restart.')
-    #     return functions
-    #
-    # def save_cache_radare(self):
-    #     from haystack.reverse.heuristics import radare
-    #     func = radare.RadareAnalysis(self.memory_handler)
-    #     func.init_all_functions()
-    #     import code
-    #     code.interact(local=locals())
-    #     dumpname = self.memory_handler.get_name()
-    #     fname = config.get_cache_filename(config.CACHE_FUNCTION_NAMES, dumpname)
-    #     with file(fname, 'w') as fout:
-    #         pickle.dump(func.functions, fout)
-    #     return func.functions
+        self.reverse_level = 0
 
     def create_cache_folders(self):
         """Removes the cache folder"""
@@ -97,10 +67,26 @@ class ProcessContext(object):
             raise TypeError('heap should be a IHeapWalker')
         heap_address = walker.get_heap_address()
         if heap_address not in self.__contextes:
-            heap_context = self.make_context_for_heap_walker(walker)
+            heap_context = self.__make_context_for_heap_walker(walker)
             self._set_context_for_heap_walker(walker, heap_context)
             return heap_context
         return self.__contextes[heap_address]
+
+    def __make_context_for_heap_walker(self, walker):
+        """
+        Make the HeapContext for this heap walker.
+        This will reverse all user allocations from this HEAP into records.
+        """
+        heap_addr = walker.get_heap_address()
+        try:
+            ctx = HeapContext.cacheLoad(self.memory_handler, heap_addr)
+            log.debug("Cache avoided HeapContext initialisation")
+        except IOError as e:
+            # heaps are already generated at initialisation of self
+            mapping = self.memory_handler.get_mapping_for_address(heap_addr)
+            walker = self.memory_handler.get_heap_finder().get_heap_walker(mapping)
+            ctx = HeapContext(self.memory_handler, walker)
+        return ctx
 
     def get_context_for_address(self, address):
         """
@@ -118,29 +104,15 @@ class ProcessContext(object):
         heap_context = self.get_context_for_heap_walker(walker)
         return heap_context
 
-    def make_context_for_heap_walker(self, walker):
-        """
-        Make the HeapContext for this heap walker.
-        This will reverse all user allocations from this HEAP into records.
-        """
-        heap_addr = walker.get_heap_address()
-        try:
-            ctx = HeapContext.cacheLoad(self.memory_handler, heap_addr)
-            log.debug("Cache avoided HeapContext initialisation")
-        except IOError as e:
-            # heaps are already generated at initialisation of self
-            mapping = self.memory_handler.get_mapping_for_address(heap_addr)
-            walker = self.memory_handler.get_heap_finder().get_heap_walker(mapping)
-            ctx = HeapContext(self.memory_handler, walker)
-        return ctx
-
     def list_contextes(self):
         """Returns all known HeapContext"""
         return self.__contextes.values()
 
     def _load_graph_cache(self):
-        from haystack.reverse.heuristics import reversers
-        graph_rev = reverse.heuristics.graph.PointerGraphReverser(self.memory_handler)
+        graph_rev = graph.PointerGraphReverser(self.memory_handler)
+        # if self.reverse_level < graph_rev.REVERSE_LEVEL:
+        #     # we need to reverse the process FIXME
+        #     raise RuntimeError('Please reverse the process first')
         self.__record_graph = graph_rev.load_process_graph()
 
     def get_predecessors(self, record):
@@ -155,7 +127,7 @@ class ProcessContext(object):
         predecessors_label = self.__record_graph.predecessors(hex(record.address))
         records = []
         for label in predecessors_label:
-            # FIXME, eradicate all L for PY3 migration
+            # eradicate all L for PY3 migration
             if label[-1] == 'L':
                 label = label[:-1]
             record_addr = int(label, 16)
@@ -166,6 +138,14 @@ class ProcessContext(object):
     def get_filename_cache_headers(self):
         dumpname = self.memory_handler.get_name()
         return config.get_cache_filename(config.CACHE_GENERATED_PY_HEADERS_VALUES, dumpname)
+
+    def _get_reverse_level(self):
+        return self.__reverse_level
+
+    def _set_reverse_level(self, level):
+        self.__reverse_level = level
+
+    reverse_level = property(_get_reverse_level, _set_reverse_level, None)
 
 
 class HeapContext(object):
@@ -222,13 +202,6 @@ class HeapContext(object):
         heap_mapping = self.memory_handler.get_mapping_for_address(self._heap_start)
         finder = self.memory_handler.get_heap_finder()
         self.walker = finder.get_heap_walker(heap_mapping)
-
-
-        #if self.memory_handler.get_target_platform().get_os_name() not in ['winxp', 'win7']:
-        #    log.info('[+] Reversing function pointers names')
-        #    # TODO in reversers
-        #    # dict(libdl.reverseLocalFonctionPointerNames(self) )
-        #    self._function_names = dict()
         return
 
     def _is_record_cache_dirty(self):
@@ -501,14 +474,3 @@ def get_context_for_address(memory_handler, address):
     for the HEAP that hosts this address
     """
     return memory_handler.get_reverse_context().get_context_for_address(address)
-    #assert isinstance(address, long) or isinstance(address, int)
-    #heap_mapping = memory_handler.get_mapping_for_address(address)
-    #if not heap_mapping:
-    #    raise ValueError("Invalid address: 0x%x", address)
-    #finder = memory_handler.get_heap_finder()
-    # walker = finder.get_heap_walker(heap_mapping)
-    # if not walker:
-    #    raise ValueError("Address is not in heap: 0x%x", address)
-    # _context = memory_handler.get_reverse_context()
-    # heap_context = _context.get_context_for_heap_walker(walker)
-    # return heap_context
