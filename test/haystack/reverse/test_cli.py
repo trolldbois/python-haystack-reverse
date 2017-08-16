@@ -20,7 +20,7 @@ class TestReverseBasic(unittest.TestCase):
     def setUpClass(cls):
         cls.dumpname = 'dmp://./test/dumps/minidump/cmd.dmp'
         cls.cache_dumpname = cls.dumpname[8:]+'.d'
-        config.remove_cache_folder(cls.cache_dumpname)
+        # config.remove_cache_folder(cls.cache_dumpname)
 
     def test_reverse(self):
         testargs = ["haystack-reverse", self.dumpname]
