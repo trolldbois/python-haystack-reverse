@@ -4,6 +4,8 @@ from __future__ import print_function
 import logging
 
 from haystack.abc import interfaces
+
+import reverse.heuristics.graph
 from haystack.reverse import config
 from haystack.reverse import context
 from haystack.reverse.heuristics import reversers
@@ -123,7 +125,7 @@ def reverse_instances(memory_handler):
 
     # graph pointer relations between allocators
     log.info('Reversing PointerGraph')
-    ptrgraph = reversers.PointerGraphReverser(memory_handler)
+    ptrgraph = reverse.heuristics.graph.PointerGraphReverser(memory_handler)
     ptrgraph.reverse()
 
     # extract all strings

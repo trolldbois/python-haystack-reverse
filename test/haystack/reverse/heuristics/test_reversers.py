@@ -11,6 +11,8 @@ import unittest
 import sys
 
 from haystack.mappings import folder
+
+import reverse.heuristics.graph
 from haystack import constraints
 from haystack.reverse import config
 from haystack.reverse import context
@@ -673,7 +675,7 @@ class TestGraphReverser(SrcTests):
 
     def test_graph(self):
         log.debug('Reversing PointerGraph')
-        ptrgraph = reversers.PointerGraphReverser(self.memory_handler)
+        ptrgraph = reverse.heuristics.graph.PointerGraphReverser(self.memory_handler)
         ptrgraph.reverse()
 
 

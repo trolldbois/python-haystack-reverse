@@ -14,6 +14,7 @@ from builtins import map
 from haystack.abc import interfaces
 from past.builtins import long
 
+import reverse.heuristics.graph
 from haystack.reverse import config
 from haystack.reverse import enumerators
 from haystack.reverse import matchers
@@ -139,7 +140,7 @@ class ProcessContext(object):
 
     def _load_graph_cache(self):
         from haystack.reverse.heuristics import reversers
-        graph_rev = reversers.PointerGraphReverser(self.memory_handler)
+        graph_rev = reverse.heuristics.graph.PointerGraphReverser(self.memory_handler)
         self.__record_graph = graph_rev.load_process_graph()
 
     def get_predecessors(self, record):
@@ -355,6 +356,18 @@ class HeapContext(object):
 
     def get_filename_cache_graph(self):
         return config.get_cache_filename(config.CACHE_GRAPH, self.dumpname, self._heap_start)
+
+    def get_filename_cache_graph_connected(self):
+        return config.get_cache_filename("graph_connected", self.dumpname, self._heap_start)
+
+    def get_filename_cache_graph_isomorphic(self, num):
+        return config.get_cache_filename("graphs_isomorphic_%d" % num, self.dumpname, self._heap_start)
+
+    def get_filename_cache_graph_important(self, num):
+        return config.get_cache_filename("graphs_important_%x" % num, self.dumpname, self._heap_start)
+
+    def get_filename_cache_graph_png(self):
+        return config.get_cache_filename(config.CACHE_GRAPH_PNG, self.dumpname, self._heap_start)
 
     def get_filename_cache_pointers_addresses(self):
         return config.get_cache_filename(config.CACHE_HEAP_ADDRS, self.dumpname, self._heap_start)
