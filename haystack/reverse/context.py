@@ -16,7 +16,6 @@ from past.builtins import long
 
 from haystack.reverse import config
 from haystack.reverse import enumerators
-from haystack.reverse.heuristics import graph
 from haystack.reverse import matchers
 from haystack.reverse import searchers
 from haystack.reverse import structure
@@ -109,6 +108,7 @@ class ProcessContext(object):
         return self.__contextes.values()
 
     def _load_graph_cache(self):
+        from haystack.reverse.heuristics import graph
         graph_rev = graph.PointerGraphReverser(self.memory_handler)
         # if self.reverse_level < graph_rev.REVERSE_LEVEL:
         #     # we need to reverse the process FIXME
